@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:latest
+    container_name: auth-postgres
+    environment:
+      POSTGRES_DB: auth_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - auth-network
+
+  auth-service:
+    build: .
+    container_name: auth-service
+    depends_on:
+      - postgres
+    ports:
+      - "8080:8080"
+      - "5005:5005"  # 👈 порт для дебагу
+    env_file:
+      - .env
+    networks:
+      - auth-network
+
+volumes:
+  pgdata:
+
+networks:
+  auth-network:
