@@ -35,6 +35,7 @@ jobs:
       # 5. Копіювання файлів на сервер через SCP
       - name: Copy deploy files to server
         uses: appleboy/scp-action@v0.1.7
+        continue-on-error: true
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
