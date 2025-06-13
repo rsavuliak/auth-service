@@ -586,7 +586,6 @@ class AuthControllerIntegrationTest {
                 .getResponseBodyContent();
 
         JsonNode json = objectMapper.readTree(responseBody);
-        System.out.println(new String(responseBody));
         String accessToken = json.get("token").asText();
         String refreshToken = json.get("refreshToken").asText();
 
