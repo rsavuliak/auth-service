@@ -18,17 +18,17 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Build project
+      - name: Build JAR
         run: ./mvnw clean package -DskipTests
 
-      - name: Copy files to server via SCP
+      - name: Copy deploy files to server via SCP
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.PRIVATE_KEY }}
           port: ${{ secrets.PORT }}
-          source: "./target ./docker-compose.yml ./Dockerfile .env"
+          source: "./target ./docker-compose.yml ./Dockerfile"
           target: "/root/auth-service"
           rm: false
 
@@ -41,5 +41,11 @@ jobs:
           port: ${{ secrets.PORT }}
           script: |
             cd /root/auth-service
+
+            echo "SPRING_DATASOURCE_URL=${{ secrets.ENV_SPRING_DATASOURCE_URL }}" > .env
+            echo "SPRING_DATASOURCE_USERNAME=${{ secrets.ENV_SPRING_DATASOURCE_USERNAME }}" >> .env
+            echo "SPRING_DATASOURCE_PASSWORD=${{ secrets.ENV_SPRING_DATASOURCE_PASSWORD }}" >> .env
+            echo "JWT_SECRET=${{ secrets.ENV_JWT_SECRET }}" >> .env
+
             docker compose down
             docker compose up -d --build
