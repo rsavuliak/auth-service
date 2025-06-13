@@ -617,7 +617,6 @@ class AuthControllerIntegrationTest {
 
         // 🔹 Викликаємо /refresh
         var refreshRequest = new TokenRefreshRequest(refreshToken);
-        System.out.println("🧪 Sending refresh token in request: " + refreshToken);
 
         byte[] refreshResponseBytes = webTestClient.post()
                 .uri("/api/auth/refresh")
