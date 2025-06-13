@@ -21,6 +21,12 @@ jobs:
       - name: Build JAR
         run: ./mvnw clean package -DskipTests
 
+      - name: Debug files
+        run: |
+          pwd
+          ls -la
+          ls -la target
+
       - name: Copy deploy files to server via SCP
         uses: appleboy/scp-action@v0.1.7
         with:
