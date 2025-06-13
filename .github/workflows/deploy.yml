@@ -10,23 +10,28 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1. Клонування репозиторію
       - name: Checkout repo
         uses: actions/checkout@v4
 
+      # 2. Налаштування SSH з ключа
       - name: Set up SSH
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.DO_KEY_CI }}" > ~/.ssh/id_ed25519
+          echo "${{ secrets.PRIVATE_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H ${{ secrets.DO_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ secrets.HOST }} >> ~/.ssh/known_hosts
 
+      # 3. Перевірка підключення до сервера
       - name: Test SSH connection
         run: |
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 ${{ secrets.DO_USER }}@${{ secrets.DO_HOST }} "echo '✅ SSH works'"
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 ${{ secrets.USERNAME }}@${{ secrets.HOST }} "echo '✅ SSH connection works'"
 
+      # 4. Збірка JAR
       - name: Build project
         run: ./mvnw clean package -DskipTests
 
+      # 5. Підготовка deploy-папки
       - name: Prepare deploy folder
         run: |
           mkdir deploy
@@ -34,13 +39,15 @@ jobs:
           cp docker-compose.yml deploy/
           cp Dockerfile deploy/
 
+      # 6. Копіювання на сервер через rsync
       - name: Copy files to droplet
         run: |
-          rsync -avz --delete -e "ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no" ./deploy/ ${{ secrets.DO_USER }}@${{ secrets.DO_HOST }}:/root/auth-service
+          rsync -avz --delete -e "ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no" ./deploy/ ${{ secrets.USERNAME }}@${{ secrets.HOST }}:/root/auth-service
 
-      - name: Run docker-compose on droplet
+      # 7. Деплой на сервері
+      - name: Run docker compose on server
         run: |
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 ${{ secrets.DO_USER }}@${{ secrets.DO_HOST }} << 'EOF'
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 ${{ secrets.USERNAME }}@${{ secrets.HOST }} << 'EOF'
             cd /root/auth-service
 
             echo "SPRING_DATASOURCE_URL=${{ secrets.ENV_SPRING_DATASOURCE_URL }}" > .env
