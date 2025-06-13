@@ -21,7 +21,7 @@ jobs:
       - name: Build JAR
         run: ./mvnw clean package -DskipTests
 
-      - name: Debug files
+      - name: Debug files before copy
         run: |
           pwd
           ls -la
@@ -50,11 +50,9 @@ jobs:
           port: ${{ secrets.PORT }}
           script: |
             cd /root/auth-service
-
             echo "SPRING_DATASOURCE_URL=${{ secrets.ENV_SPRING_DATASOURCE_URL }}" > .env
             echo "SPRING_DATASOURCE_USERNAME=${{ secrets.ENV_SPRING_DATASOURCE_USERNAME }}" >> .env
             echo "SPRING_DATASOURCE_PASSWORD=${{ secrets.ENV_SPRING_DATASOURCE_PASSWORD }}" >> .env
             echo "JWT_SECRET=${{ secrets.ENV_JWT_SECRET }}" >> .env
-
             docker compose down
             docker compose up -d --build
