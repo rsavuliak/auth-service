@@ -13,7 +13,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     networks:
-      - auth-network
+      - gateway-network
 
   auth-service:
     build: .
@@ -26,10 +26,11 @@ services:
     env_file:
       - .env
     networks:
-      - auth-network
+      - gateway-network
 
 volumes:
   pgdata:
 
 networks:
-  auth-network:
+  gateway-network:
+    external: true
