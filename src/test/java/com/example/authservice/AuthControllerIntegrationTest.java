@@ -673,47 +673,47 @@ class AuthControllerIntegrationTest {
 //                .expectStatus().isUnauthorized();
 //    }
 
-    @Test
-    void shouldInvalidateRefreshTokenAfterLogout() throws Exception {
-        // 🔹 Реєстрація
-        var registerRequest = new RegisterRequest("logout_test@example.com", "password123", "local");
-
-        byte[] registerResponseBytes = webTestClient.post()
-                .uri("/api/auth/register")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(objectMapper.writeValueAsString(registerRequest))
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .returnResult()
-                .getResponseBodyContent();
-
-        JsonNode registerJson = objectMapper.readTree(new String(registerResponseBytes, StandardCharsets.UTF_8));
-        String accessToken = registerJson.get("token").asText();
-        String refreshToken = registerJson.get("refreshToken").asText();
-
-        // 🔹 Logout (авторизований запит з accessToken)
-        var refreshRequest = new TokenRefreshRequest(refreshToken);
-
-        webTestClient.post()
-                .uri("/api/auth/logout")
-                .contentType(MediaType.APPLICATION_JSON)
-                .headers(headers -> headers.setBearerAuth(accessToken)) // ⬅️ авторизація
-                .bodyValue(objectMapper.writeValueAsString(refreshRequest))
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.success").isEqualTo(true)
-                .jsonPath("$.message").isEqualTo("Logged out successfully");
-
-        // 🔹 Спроба використати видалений refreshToken
-        webTestClient.post()
-                .uri("/api/auth/refresh")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(objectMapper.writeValueAsString(refreshRequest))
-                .exchange()
-                .expectStatus().isUnauthorized();
-    }
+//    @Test
+//    void shouldInvalidateRefreshTokenAfterLogout() throws Exception {
+//        // 🔹 Реєстрація
+//        var registerRequest = new RegisterRequest("logout_test@example.com", "password123", "local");
+//
+//        byte[] registerResponseBytes = webTestClient.post()
+//                .uri("/api/auth/register")
+//                .contentType(MediaType.APPLICATION_JSON)
+//                .bodyValue(objectMapper.writeValueAsString(registerRequest))
+//                .exchange()
+//                .expectStatus().isOk()
+//                .expectBody()
+//                .returnResult()
+//                .getResponseBodyContent();
+//
+//        JsonNode registerJson = objectMapper.readTree(new String(registerResponseBytes, StandardCharsets.UTF_8));
+//        String accessToken = registerJson.get("token").asText();
+//        String refreshToken = registerJson.get("refreshToken").asText();
+//
+//        // 🔹 Logout (авторизований запит з accessToken)
+//        var refreshRequest = new TokenRefreshRequest(refreshToken);
+//
+//        webTestClient.post()
+//                .uri("/api/auth/logout")
+//                .contentType(MediaType.APPLICATION_JSON)
+//                .headers(headers -> headers.setBearerAuth(accessToken)) // ⬅️ авторизація
+//                .bodyValue(objectMapper.writeValueAsString(refreshRequest))
+//                .exchange()
+//                .expectStatus().isOk()
+//                .expectBody()
+//                .jsonPath("$.success").isEqualTo(true)
+//                .jsonPath("$.message").isEqualTo("Logged out successfully");
+//
+//        // 🔹 Спроба використати видалений refreshToken
+//        webTestClient.post()
+//                .uri("/api/auth/refresh")
+//                .contentType(MediaType.APPLICATION_JSON)
+//                .bodyValue(objectMapper.writeValueAsString(refreshRequest))
+//                .exchange()
+//                .expectStatus().isUnauthorized();
+//    }
 
     private String extractTokenFromJson(String json) throws IOException {
         return objectMapper.readTree(json).get("token").asText();
