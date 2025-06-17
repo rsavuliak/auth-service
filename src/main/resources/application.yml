@@ -18,9 +18,3 @@ jwt:
     secret: ${JWT_SECRET}
     refresh-token:
       expiration-ms: 604800000 # 7 днів
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health, info

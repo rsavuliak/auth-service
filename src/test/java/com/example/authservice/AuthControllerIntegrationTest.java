@@ -673,7 +673,7 @@ class AuthControllerIntegrationTest {
 //                .expectStatus().isUnauthorized();
 //    }
 
-/*    @Test
+    @Test
     void shouldInvalidateRefreshTokenAfterLogout() throws Exception {
         // 🔹 Реєстрація
         var registerRequest = new RegisterRequest("logout_test@example.com", "password123", "local");
@@ -713,7 +713,7 @@ class AuthControllerIntegrationTest {
                 .bodyValue(objectMapper.writeValueAsString(refreshRequest))
                 .exchange()
                 .expectStatus().isUnauthorized();
-    }*/
+    }
 
     private String extractTokenFromJson(String json) throws IOException {
         return objectMapper.readTree(json).get("token").asText();
