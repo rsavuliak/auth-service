@@ -27,9 +27,12 @@ services:
       - .env
     networks:
       - auth-network
+      - backend
 
 volumes:
   pgdata:
 
 networks:
   auth-network:
+  backend:
+    external: true
