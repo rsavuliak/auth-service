@@ -27,7 +27,7 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 ${{ secrets.USERNAME }}@${{ secrets.HOST }} "echo '✅ SSH connection works'"
 
-      # 4. Збірка JAR
+      # 4.Збірка JAR
       - name: Build project
         run: ./mvnw clean package -DskipTests
 
