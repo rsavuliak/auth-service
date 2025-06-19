@@ -14,10 +14,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.Map;
-
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/")
 public class AuthController {
 
     private final AuthService authService;
