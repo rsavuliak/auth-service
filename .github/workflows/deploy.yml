@@ -42,13 +42,13 @@ jobs:
       # 6. Копіювання на сервер через rsync
       - name: Copy files to droplet
         run: |
-          rsync -avz --delete -e "ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no" ./deploy/ ${{ secrets.USERNAME }}@${{ secrets.HOST }}:/deploy/auth-service
+          rsync -avz --delete -e "ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no" ./deploy/ ${{ secrets.USERNAME }}@${{ secrets.HOST }}:/home/deploy/auth-service
 
       # 7. Деплой на сервері
       - name: Run docker compose on server
         run: |
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 ${{ secrets.USERNAME }}@${{ secrets.HOST }} << 'EOF'
-            cd /deploy/auth-service
+            cd /home/deploy/auth-service
 
             echo "SPRING_DATASOURCE_URL=${{ secrets.ENV_SPRING_DATASOURCE_URL }}" > .env
             echo "SPRING_DATASOURCE_USERNAME=${{ secrets.ENV_SPRING_DATASOURCE_USERNAME }}" >> .env
