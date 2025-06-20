@@ -6,5 +6,5 @@ docker-compose down --remove-orphans
 echo "🧹 Збірка .jar..."
 mvn clean package
 
-echo "🚀 Запуск з пересборкою..."
+echo "🚀 Запуск з перезбіркою..."
 docker-compose up --build
