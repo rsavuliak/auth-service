@@ -22,7 +22,6 @@ services:
       - postgres
     ports:
       - "8080:8080"
-#      - "5005:5005"  # 👈 debug
     env_file:
       - .env
     networks:
