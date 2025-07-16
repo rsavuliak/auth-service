@@ -6,7 +6,7 @@ services:
     container_name: auth-postgres
     command: postgres -k /tmp
     environment:
-      POSTGRES_DB: auth_db
+      POSTGRES_DB: postgres
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
