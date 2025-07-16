@@ -14,7 +14,7 @@ services:
     volumes:
       - auth_pgdata_clean:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-    read_only: true
+    read_only: false
     tmpfs:
       - /tmp
     networks:
