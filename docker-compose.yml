@@ -4,16 +4,14 @@ services:
   postgres:
     image: postgres:17-alpine
     container_name: auth-postgres
-    command: postgres -k /tmp
     environment:
-      POSTGRES_DB: postgres
+      POSTGRES_DB: auth_db
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
       - "5433:5432"
     volumes:
-      - auth_pgdata_clean:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - auth_pgdata:/var/lib/postgresql/data
     read_only: false
     tmpfs:
       - /tmp
@@ -34,7 +32,7 @@ services:
       - backend
 
 volumes:
-  auth_pgdata_clean:
+  auth_pgdata:
 
 networks:
   auth-network:
