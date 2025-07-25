@@ -21,20 +21,22 @@ services:
   auth-service:
     build: .
     container_name: auth-service
+    environment:
+      - VIRTUAL_HOST=savuliak.com
+      - LETSENCRYPT_HOST=savuliak.com
+      - LETSENCRYPT_EMAIL=savuliak.roman@gmail.com
     depends_on:
       - postgres
-    ports:
-      - "8080:8080"
     env_file:
       - .env
     networks:
       - auth-network
-      - backend
+      - gateway-network
 
 volumes:
   auth_pgdata:
 
 networks:
   auth-network:
-  backend:
+  gateway-network:
     external: true
