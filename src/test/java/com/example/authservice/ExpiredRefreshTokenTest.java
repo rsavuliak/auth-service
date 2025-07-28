@@ -92,7 +92,7 @@ public class ExpiredRefreshTokenTest {
         var register = new RegisterRequest("expired_token_test@example.com", "password123", "local");
 
         byte[] responseBytes = webTestClient.post()
-                .uri("/register")
+                .uri(apiPath() + "/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(objectMapper.writeValueAsString(register))
                 .exchange()
@@ -109,10 +109,14 @@ public class ExpiredRefreshTokenTest {
         var request = new TokenRefreshRequest(expiredRefreshToken);
 
         webTestClient.post()
-                .uri("/refresh")
+                .uri(apiPath() + "/refresh")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(objectMapper.writeValueAsString(request))
                 .exchange()
                 .expectStatus().isUnauthorized();
+    }
+
+    private String apiPath() {
+        return "/api/v1/auth";
     }
 }

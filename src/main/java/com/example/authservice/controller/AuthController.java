@@ -7,7 +7,6 @@ import com.example.authservice.repository.UserRepository;
 import com.example.authservice.security.JwtService;
 import com.example.authservice.service.AuthService;
 import com.example.authservice.service.RefreshTokenService;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 @RestController
+@RequestMapping("/api/v1/auth")
 public class AuthController {
 
     private final AuthService authService;
@@ -32,13 +32,6 @@ public class AuthController {
         this.jwtService = jwtService;
         this.userRepository = userRepository;
         this.refreshTokenService = refreshTokenService;
-    }
-
-    @RequestMapping("/**")
-    public ResponseEntity<String> debug(HttpServletRequest request) {
-        String path = request.getRequestURI();
-        System.out.println("Got request path: " + path);
-        return ResponseEntity.ok("OK");
     }
 
     @PostMapping("/register")
