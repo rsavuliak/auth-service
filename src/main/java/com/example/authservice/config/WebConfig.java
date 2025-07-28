@@ -10,7 +10,7 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**") // Дозволити для всіх endpoints
-                .allowedOrigins("*") // Дозволити з будь-якого домену
+                .allowedOrigins("https://savuliak.com") // Дозволити з будь-якого домену
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS") // Які методи дозволені
                 .allowedHeaders("*"); // Які заголовки дозволені
     }

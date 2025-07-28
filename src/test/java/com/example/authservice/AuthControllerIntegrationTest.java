@@ -41,10 +41,8 @@ import java.util.UUID;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 class AuthControllerIntegrationTest {
+    private static final String apiPath = "/api/v1/auth";
 
-    private String apiPath() {
-        return "/api/v1/auth";
-    }
     @LocalServerPort
     private int port;
 
@@ -95,7 +93,7 @@ class AuthControllerIntegrationTest {
 
         // 1. Реєструємо користувача і отримуємо токен
         String responseJson = webTestClient.post()
-                .uri("http://localhost:" + port + apiPath() + "/register")
+                .uri("http://localhost:" + port + apiPath + "/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(objectMapper.writeValueAsString(register))
                 .exchange()
@@ -108,7 +106,7 @@ class AuthControllerIntegrationTest {
 
         // 2. Перевіряємо, що /me повертає очікуваного користувача
         webTestClient.get()
-                .uri("http://localhost:" + port + apiPath() + "/me")
+                .uri("http://localhost:" + port + apiPath + "/me")
                 .header("Authorization", "Bearer " + token)
                 .exchange()
                 .expectStatus().isOk()
@@ -122,7 +120,7 @@ class AuthControllerIntegrationTest {
         // Крок 1: реєструємо користувача
         RegisterRequest register = new RegisterRequest("login_test@example.com", "password123", "local");
         webTestClient.post()
-                .uri(apiPath() + "/register")
+                .uri(apiPath + "/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(objectMapper.writeValueAsString(register))
                 .exchange()
@@ -131,7 +129,7 @@ class AuthControllerIntegrationTest {
         // Крок 2: логінимося з тими ж даними
         LoginRequest login = new LoginRequest("login_test@example.com", "password123");
         webTestClient.post()
-                .uri(apiPath() + "/login")
+                .uri(apiPath + "/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(objectMapper.writeValueAsString(login))
                 .exchange()
@@ -145,7 +143,7 @@ class AuthControllerIntegrationTest {
         // Спочатку реєструємо користувача
         RegisterRequest register = new RegisterRequest("invalidpass@example.com", "correctPassword", "local");
         webTestClient.post()
-                .uri("http://localhost:" + port + apiPath() + "/register")
+                .uri("http://localhost:" + port + apiPath + "/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(objectMapper.writeValueAsString(register))
                 .exchange()
@@ -154,7 +152,7 @@ class AuthControllerIntegrationTest {
         // Після цього пробуємо увійти з неправильним паролем
         LoginRequest login = new LoginRequest("invalidpass@example.com", "wrongPassword");
         webTestClient.post()
-                .uri("http://localhost:" + port + apiPath() + "/login")
+                .uri("http://localhost:" + port + apiPath + "/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(objectMapper.writeValueAsString(login))
                 .exchange()
@@ -164,7 +162,7 @@ class AuthControllerIntegrationTest {
     @Test
     void shouldRejectAccessToMeWithoutToken() {
         webTestClient.get()
-                .uri("http://localhost:" + port + apiPath() + "/me")
+                .uri("http://localhost:" + port + apiPath + "/me")
                 .exchange()
                 .expectStatus().isUnauthorized();
     }
@@ -172,7 +170,7 @@ class AuthControllerIntegrationTest {
     @Test
     void shouldRejectAccessToMeWithInvalidToken() {
         webTestClient.get()
-                .uri(apiPath() + "/me")
+                .uri(apiPath + "/me")
                 .header("Authorization", "Bearer invalid.token.value")
                 .exchange()
                 .expectStatus().isUnauthorized();
@@ -183,7 +181,7 @@ class AuthControllerIntegrationTest {
         // Крок 1: реєструємо користувача
         RegisterRequest register = new RegisterRequest("me_test@example.com", "password123", "local");
         webTestClient.post()
-                .uri(apiPath() + "/register")
+                .uri(apiPath + "/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(objectMapper.writeValueAsString(register))
                 .exchange()
@@ -192,7 +190,7 @@ class AuthControllerIntegrationTest {
         // Крок 2: логінимося
         LoginRequest login = new LoginRequest("me_test@example.com", "password123");
         byte[] tokenJson = webTestClient.post()
-                .uri(apiPath() + "/login")
+                .uri(apiPath + "/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(objectMapper.writeValueAsString(login))
                 .exchange()
@@ -205,7 +203,7 @@ class AuthControllerIntegrationTest {
 
         // Крок 3: звернення до /me з токеном
         webTestClient.get()
-                .uri(apiPath() + "/me")
+                .uri(apiPath + "/me")
                 .header("Authorization", "Bearer " + token)
                 .exchange()
                 .expectStatus().isOk()
@@ -219,7 +217,7 @@ class AuthControllerIntegrationTest {
         // Крок 1: реєстрація
         RegisterRequest register = new RegisterRequest("current_user@example.com", "password456", "local");
         webTestClient.post()
-                .uri(apiPath() + "/register")
+                .uri(apiPath + "/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(objectMapper.writeValueAsString(register))
                 .exchange()
@@ -228,7 +226,7 @@ class AuthControllerIntegrationTest {
         // Крок 2: логін
         LoginRequest login = new LoginRequest("current_user@example.com", "password456");
         byte[] tokenJson = webTestClient.post()
-                .uri(apiPath() + "/login")
+                .uri(apiPath + "/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(objectMapper.writeValueAsString(login))
                 .exchange()
@@ -241,7 +239,7 @@ class AuthControllerIntegrationTest {
 
         // Крок 3: запит до /me
         webTestClient.get()
-                .uri(apiPath() + "/me")
+                .uri(apiPath + "/me")
                 .header("Authorization", "Bearer " + token)
                 .exchange()
                 .expectStatus().isOk()
@@ -255,7 +253,7 @@ class AuthControllerIntegrationTest {
         LoginRequest login = new LoginRequest("unknown@example.com", "somePassword");
 
         webTestClient.post()
-                .uri(apiPath() + "/login")
+                .uri(apiPath + "/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(objectMapper.writeValueAsString(login))
                 .exchange()
@@ -265,7 +263,7 @@ class AuthControllerIntegrationTest {
     @Test
     void shouldRejectMeWithInvalidToken() {
         webTestClient.get()
-                .uri(apiPath() + "/me")
+                .uri(apiPath + "/me")
                 .header("Authorization", "Bearer invalid.jwt.token")
                 .exchange()
                 .expectStatus().isUnauthorized(); // ✅ правильний статус для невалідного токена
@@ -276,7 +274,7 @@ class AuthControllerIntegrationTest {
         // Успішна реєстрація
         RegisterRequest register = new RegisterRequest("duplicate@example.com", "password123", "local");
         webTestClient.post()
-                .uri(apiPath() + "/register")
+                .uri(apiPath + "/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(objectMapper.writeValueAsString(register))
                 .exchange()
@@ -288,7 +286,7 @@ class AuthControllerIntegrationTest {
                 .build();
 
         statelessClient.post()
-                .uri(apiPath() + "/register")
+                .uri(apiPath + "/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(objectMapper.writeValueAsString(register))
                 .exchange()
@@ -305,7 +303,7 @@ class AuthControllerIntegrationTest {
         """;
 
         webTestClient.post()
-                .uri(apiPath() + "/register")
+                .uri(apiPath + "/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(requestJson)
                 .exchange()
@@ -322,7 +320,7 @@ class AuthControllerIntegrationTest {
         """;
 
         webTestClient.post()
-                .uri(apiPath() + "/register")
+                .uri(apiPath + "/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(invalidPayload)
                 .exchange()
@@ -339,7 +337,7 @@ class AuthControllerIntegrationTest {
         RegisterRequest register = new RegisterRequest("ghost@example.com", "password123", "local");
         String token = objectMapper.readTree(
                 webTestClient.post()
-                        .uri(apiPath() + "/register")
+                        .uri(apiPath + "/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .bodyValue(objectMapper.writeValueAsString(register))
                         .exchange()
@@ -354,7 +352,7 @@ class AuthControllerIntegrationTest {
 
         // Крок 3: запит до /me — має бути 404
         webTestClient.get()
-                .uri(apiPath() + "/me")
+                .uri(apiPath + "/me")
                 .header("Authorization", "Bearer " + token)
                 .exchange()
                 .expectStatus().isNotFound();
@@ -366,7 +364,7 @@ class AuthControllerIntegrationTest {
         RegisterRequest register = new RegisterRequest("deleted@example.com", "password123", "local");
         String tokenJson = new String(
                 webTestClient.post()
-                        .uri(apiPath() + "/register")
+                        .uri(apiPath + "/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .bodyValue(objectMapper.writeValueAsString(register))
                         .exchange()
@@ -386,7 +384,7 @@ class AuthControllerIntegrationTest {
 
         // Крок 3: Запит до /me після видалення користувача
         webTestClient.get()
-                .uri(apiPath() + "/me")
+                .uri(apiPath + "/me")
                 .header("Authorization", "Bearer " + token)
                 .exchange()
                 .expectStatus().isNotFound();
@@ -397,7 +395,7 @@ class AuthControllerIntegrationTest {
         // Крок 1: реєструємо користувача
         RegisterRequest register = new RegisterRequest("token_refresh@example.com", "password123", "local");
         webTestClient.post()
-                .uri(apiPath() + "/register")
+                .uri(apiPath + "/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(objectMapper.writeValueAsString(register))
                 .exchange()
@@ -406,7 +404,7 @@ class AuthControllerIntegrationTest {
         // Крок 2: перший логін
         LoginRequest login = new LoginRequest("token_refresh@example.com", "password123");
         byte[] firstLoginJson = webTestClient.post()
-                .uri(apiPath() + "/login")
+                .uri(apiPath + "/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(objectMapper.writeValueAsString(login))
                 .exchange()
@@ -418,7 +416,7 @@ class AuthControllerIntegrationTest {
 
         // Крок 3: другий логін
         byte[] secondLoginJson = webTestClient.post()
-                .uri(apiPath() + "/login")
+                .uri(apiPath + "/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(objectMapper.writeValueAsString(login))
                 .exchange()
@@ -449,7 +447,7 @@ class AuthControllerIntegrationTest {
 
         // Виклик до /me з простроченим токеном
         webTestClient.get()
-                .uri(apiPath() + "/me")
+                .uri(apiPath + "/me")
                 .header("Authorization", "Bearer " + expiredToken)
                 .exchange()
                 .expectStatus().isUnauthorized();
@@ -473,7 +471,7 @@ class AuthControllerIntegrationTest {
 
         // Очікуємо 401 Unauthorized
         webTestClient.get()
-                .uri(apiPath() + "/me")
+                .uri(apiPath + "/me")
                 .header("Authorization", "Bearer " + forgedToken)
                 .exchange()
                 .expectStatus().isUnauthorized();
@@ -493,7 +491,7 @@ class AuthControllerIntegrationTest {
 
         // 2. Запит до /me з цим токеном
         webTestClient.get()
-                .uri(apiPath() + "/me")
+                .uri(apiPath + "/me")
                 .header("Authorization", "Bearer " + invalidToken)
                 .exchange()
                 .expectStatus().isUnauthorized();
@@ -504,7 +502,7 @@ class AuthControllerIntegrationTest {
         // Створюємо користувача
         RegisterRequest register = new RegisterRequest("noemailtoken@example.com", "password123", "local");
         webTestClient.post()
-                .uri(apiPath() + "/register")
+                .uri(apiPath + "/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(register)
                 .exchange()
@@ -524,7 +522,7 @@ class AuthControllerIntegrationTest {
 
         // Звертаємось до /me
         webTestClient.get()
-                .uri(apiPath() + "/me")
+                .uri(apiPath + "/me")
                 .header("Authorization", "Bearer " + tokenWithoutEmail)
                 .exchange()
                 .expectStatus().isUnauthorized();
@@ -535,7 +533,7 @@ class AuthControllerIntegrationTest {
         // Створюємо користувача
         RegisterRequest register = new RegisterRequest("wrongemailtoken@example.com", "password123", "local");
         webTestClient.post()
-                .uri(apiPath() + "/register")
+                .uri(apiPath + "/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(register)
                 .exchange()
@@ -558,7 +556,7 @@ class AuthControllerIntegrationTest {
 
         // Очікуємо 404
         webTestClient.get()
-                .uri(apiPath() + "/me")
+                .uri(apiPath + "/me")
                 .header("Authorization", "Bearer " + tokenWithWrongEmail)
                 .exchange()
                 .expectStatus().isUnauthorized();
@@ -570,7 +568,7 @@ class AuthControllerIntegrationTest {
         RegisterRequest register = new RegisterRequest("refresh_login@example.com", "password123", "local");
 
         webTestClient.post()
-                .uri(apiPath() + "/register")
+                .uri(apiPath + "/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(objectMapper.writeValueAsString(register))
                 .exchange()
@@ -580,7 +578,7 @@ class AuthControllerIntegrationTest {
         LoginRequest login = new LoginRequest("refresh_login@example.com", "password123");
 
         byte[] responseBody = webTestClient.post()
-                .uri(apiPath() + "/login")
+                .uri(apiPath + "/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(objectMapper.writeValueAsString(login))
                 .exchange()
@@ -602,7 +600,7 @@ class AuthControllerIntegrationTest {
         // 🔹 Реєструємо нового користувача
         var register = new RegisterRequest("refresh_test@example.com", "password123", "local");
         byte[] registerResponseBytes = webTestClient.post()
-                .uri(apiPath() + "/register")
+                .uri(apiPath + "/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(objectMapper.writeValueAsString(register))
                 .exchange()
@@ -622,7 +620,7 @@ class AuthControllerIntegrationTest {
         var refreshRequest = new TokenRefreshRequest(refreshToken);
 
         byte[] refreshResponseBytes = webTestClient.post()
-                .uri(apiPath() + "/refresh")
+                .uri(apiPath + "/refresh")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(objectMapper.writeValueAsString(refreshRequest))
                 .exchange()
@@ -649,7 +647,7 @@ class AuthControllerIntegrationTest {
         var registerRequest = new RegisterRequest("logout_test@example.com", "password123", "local");
 
         byte[] registerResponseBytes = webTestClient.post()
-                .uri(apiPath() + "/register")
+                .uri(apiPath + "/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(objectMapper.writeValueAsString(registerRequest))
                 .exchange()
@@ -666,7 +664,7 @@ class AuthControllerIntegrationTest {
         var refreshRequest = new TokenRefreshRequest(refreshToken);
 
         webTestClient.post()
-                .uri(apiPath() + "/logout")
+                .uri(apiPath + "/logout")
                 .contentType(MediaType.APPLICATION_JSON)
                 .headers(headers -> headers.setBearerAuth(accessToken)) // ⬅️ авторизація
                 .bodyValue(objectMapper.writeValueAsString(refreshRequest))
@@ -678,7 +676,7 @@ class AuthControllerIntegrationTest {
 
         // 🔹 Спроба використати видалений refreshToken
         webTestClient.post()
-                .uri(apiPath() + "/refresh")
+                .uri(apiPath + "/refresh")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(objectMapper.writeValueAsString(refreshRequest))
                 .exchange()
