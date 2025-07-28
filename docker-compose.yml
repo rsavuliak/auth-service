@@ -23,6 +23,7 @@ services:
     container_name: auth-service
     environment:
       - VIRTUAL_HOST=savuliak.com
+      - VIRTUAL_PATH=/api/
       - LETSENCRYPT_HOST=savuliak.com
       - LETSENCRYPT_EMAIL=savuliak.roman@gmail.com
     depends_on:
