@@ -18,7 +18,7 @@ public class JwtService {
     @Value("${jwt.secret}")
     private String secretKey;
 
-    private static final long EXPIRATION_TIME = 86400000; // 1 день
+    private static final long EXPIRATION_TIME = 900000; // 15 min
 
     private Key getSigningKey() {
         byte[] keyBytes = Decoders.BASE64.decode(secretKey);
@@ -27,7 +27,7 @@ public class JwtService {
 
     public String generateToken(User user) {
         return Jwts.builder()
-                .setId(UUID.randomUUID().toString()) // <--- Додано
+                .setId(UUID.randomUUID().toString())
                 .setSubject(user.getId().toString())
                 .claim("email", user.getEmail())
                 .claim("provider", user.getProvider())

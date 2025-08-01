@@ -11,7 +11,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Clock;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -34,7 +33,6 @@ public class RefreshTokenService {
 
     @Transactional
     public RefreshToken create(User user) {
-        // Використовуємо репозиторійний метод видалення
         deleteByUser(user);
 
         RefreshToken token = new RefreshToken();
