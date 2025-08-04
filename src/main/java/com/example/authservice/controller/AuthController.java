@@ -46,8 +46,8 @@ public class AuthController {
 
     @PostMapping("/oauth/google")
     public ResponseEntity<?> googleLogin(@RequestBody GoogleAuthRequest request) {
-        System.out.println("🔵 Received Google auth code: " + request.code());
-        return ResponseEntity.ok().build();
+        System.out.println("🔵 Received Google auth code: " + request.idToken());
+        return ResponseEntity.ok(new ApiResponse(true, "🔵 Received Google auth code: ***"));
     }
 
     @GetMapping("/me")
