@@ -48,20 +48,9 @@ public class AuthController {
     }
 
     @PostMapping("/oauth/google")
-    public ResponseEntity<?> googleLogin(@RequestBody Map<String, String> payload) {
-        String res = "";
-        Set<Map.Entry<String, String>> entries = payload.entrySet();
-        for (Map.Entry<String, String> e : entries) {
-            res += e.getKey() + " : " + e.getValue();
-        }
-        String token = payload.get("credential");
-
-        System.out.println("Received Google token: " + token);
-
-        System.out.println("Received Google code: " + res);
-
-
-        return ResponseEntity.ok(new ApiResponse(true, "🔵 Received Google auth code: "));
+    public ResponseEntity<?> handleGoogleRedirect(@RequestParam("code") String code) {
+        System.out.println("Authorization code received: " + code);
+        return ResponseEntity.ok("Code received: " + code);
     }
 
     @GetMapping("/me")
