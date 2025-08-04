@@ -47,7 +47,7 @@ public class AuthController {
         return ResponseEntity.ok(authService.login(request));
     }
 
-    @PostMapping("/oauth/google")
+    @GetMapping("/oauth/google")
     public ResponseEntity<?> handleGoogleRedirect(@RequestParam("code") String code) {
         System.out.println("Authorization code received: " + code);
         return ResponseEntity.ok("Code received: " + code);
