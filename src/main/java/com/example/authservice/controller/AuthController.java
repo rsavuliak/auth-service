@@ -14,6 +14,9 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.Map;
+import java.util.Set;
+
 @RestController
 @RequestMapping("/api/v1/auth")
 public class AuthController {
@@ -45,9 +48,20 @@ public class AuthController {
     }
 
     @PostMapping("/oauth/google")
-    public ResponseEntity<?> googleLogin(@RequestBody GoogleAuthRequest request) {
-        System.out.println("🔵 Received Google auth code: " + request.idToken());
-        return ResponseEntity.ok(new ApiResponse(true, "🔵 Received Google auth code: ***"));
+    public ResponseEntity<?> googleLogin(@RequestBody Map<String, String> payload) {
+        String res = "";
+        Set<Map.Entry<String, String>> entries = payload.entrySet();
+        for (Map.Entry<String, String> e : entries) {
+            res += e.getKey() + " : " + e.getValue();
+        }
+        String token = payload.get("credential");
+
+        System.out.println("Received Google token: " + token);
+
+        System.out.println("Received Google code: " + res);
+
+
+        return ResponseEntity.ok(new ApiResponse(true, "🔵 Received Google auth code: "));
     }
 
     @GetMapping("/me")
