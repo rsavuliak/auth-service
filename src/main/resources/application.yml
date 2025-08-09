@@ -20,3 +20,9 @@ jwt:
     secret: ${JWT_SECRET}
     refresh-token:
       expiration-ms: 2592000000
+    access-token:
+        expiration-ms: 900000
+google:
+  client-id: 424121716950-g87ltpn5f3q6q4gl169frn9fp046i7rd.apps.googleusercontent.com
+  client-secret: ${GOOGLE_CLIENT_SECRET}
+  redirect-uri: https://savuliak.com/api/v1/auth/oauth/google

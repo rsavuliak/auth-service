@@ -89,7 +89,7 @@ public class ExpiredRefreshTokenTest {
 
     @Test
     void shouldRejectExpiredRefreshToken() throws Exception {
-        var register = new RegisterRequest("expired_token_test@example.com", "password123", "local");
+        var register = new RegisterRequest("expired_token_test@example.com", "password123");
 
         byte[] responseBytes = webTestClient.post()
                 .uri(apiPath() + "/register")
@@ -104,7 +104,7 @@ public class ExpiredRefreshTokenTest {
         JsonNode node = objectMapper.readTree(new String(responseBytes, StandardCharsets.UTF_8));
         String expiredRefreshToken = node.get("refreshToken").asText();
 
-        Thread.sleep(200); // токен протухає
+        Thread.sleep(200);
 
         var request = new TokenRefreshRequest(expiredRefreshToken);
 

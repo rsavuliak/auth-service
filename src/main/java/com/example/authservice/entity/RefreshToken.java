@@ -1,9 +1,12 @@
 package com.example.authservice.entity;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+
 import java.time.Instant;
 import java.util.UUID;
 
+@Getter
 @Entity
 @Table(name = "refresh_tokens")
 public class RefreshToken {
@@ -34,32 +37,16 @@ public class RefreshToken {
 
     // ===== Getters & Setters =====
 
-    public UUID getId() {
-        return id;
-    }
-
     public void setId(UUID id) {
         this.id = id;
-    }
-
-    public User getUser() {
-        return user;
     }
 
     public void setUser(User user) {
         this.user = user;
     }
 
-    public String getToken() {
-        return token;
-    }
-
     public void setToken(String token) {
         this.token = token;
-    }
-
-    public Instant getExpiryDate() {
-        return expiryDate;
     }
 
     public void setExpiryDate(Instant expiryDate) {

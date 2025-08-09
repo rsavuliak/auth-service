@@ -54,6 +54,7 @@ jobs:
             echo "SPRING_DATASOURCE_USERNAME=${{ secrets.ENV_SPRING_DATASOURCE_USERNAME }}" >> .env
             echo "SPRING_DATASOURCE_PASSWORD=${{ secrets.ENV_SPRING_DATASOURCE_PASSWORD }}" >> .env
             echo "JWT_SECRET=${{ secrets.ENV_JWT_SECRET }}" >> .env
+            echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> .env
 
             docker compose down
             docker compose up -d --build

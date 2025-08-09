@@ -1,3 +1,3 @@
-package com.example.authservice.dto;
-
-public record GoogleAuthRequest(String idToken) {}
+//package com.example.authservice.dto;
+//
+//public record GoogleAuthRequest(String idToken) {}

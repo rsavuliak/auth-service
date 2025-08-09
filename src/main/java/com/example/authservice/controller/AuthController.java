@@ -3,39 +3,27 @@ package com.example.authservice.controller;
 import com.example.authservice.dto.*;
 import com.example.authservice.entity.RefreshToken;
 import com.example.authservice.entity.User;
-import com.example.authservice.repository.UserRepository;
 import com.example.authservice.security.JwtService;
 import com.example.authservice.service.AuthService;
 import com.example.authservice.service.RefreshTokenService;
+import com.example.authservice.service.UserService;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
-
-import java.util.Map;
-import java.util.Set;
 
 @RestController
 @RequestMapping("/api/v1/auth")
+@RequiredArgsConstructor
 public class AuthController {
 
     private final AuthService authService;
     private final JwtService jwtService;
-    private final UserRepository userRepository;
     private final RefreshTokenService refreshTokenService;
+    private final UserService userService;
 
-
-    public AuthController(AuthService authService,
-                          JwtService jwtService,
-                          UserRepository userRepository,
-                          RefreshTokenService refreshTokenService) {
-        this.authService = authService;
-        this.jwtService = jwtService;
-        this.userRepository = userRepository;
-        this.refreshTokenService = refreshTokenService;
-    }
 
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
@@ -47,21 +35,13 @@ public class AuthController {
         return ResponseEntity.ok(authService.login(request));
     }
 
-    @GetMapping("/oauth/google")
-    public ResponseEntity<?> handleGoogleRedirect(@RequestParam("code") String code) {
-        System.out.println("Authorization code received: " + code);
-        return ResponseEntity.ok("Code received: " + code);
-    }
-
     @GetMapping("/me")
     public ResponseEntity<UserResponse> me(@AuthenticationPrincipal UserPrincipal principal) {
         if (principal == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        User user = userRepository.findById(principal.id())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
-
+        User user = userService.findUserById(principal.id());
         UserResponse response = new UserResponse(
                 user.getId().toString(),
                 user.getEmail(),
@@ -74,11 +54,7 @@ public class AuthController {
     @PostMapping("/refresh")
     public ResponseEntity<TokenRefreshResponse> refreshToken(@RequestBody TokenRefreshRequest request) {
         String requestRefreshToken = request.refreshToken();
-
-        RefreshToken token = refreshTokenService.findByToken(requestRefreshToken)
-                .map(refreshTokenService::verifyExpiration)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid refresh token"));
-
+        RefreshToken token = refreshTokenService.verifyExpiration(refreshTokenService.findByToken(requestRefreshToken));
         String newAccessToken = jwtService.generateToken(token.getUser());
 
         return ResponseEntity.ok(new TokenRefreshResponse(newAccessToken, token.getToken()));
