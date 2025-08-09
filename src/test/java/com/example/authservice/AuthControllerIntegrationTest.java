@@ -89,11 +89,10 @@ class AuthControllerIntegrationTest {
 
     @Test
     void shouldReturnCurrentUserAfterRegister() throws Exception {
-        RegisterRequest register = new RegisterRequest("test123@example.com", "password123", "local");
+        RegisterRequest register = new RegisterRequest("test123@example.com", "password123");
 
-        // 1. Реєструємо користувача і отримуємо токен
         String responseJson = webTestClient.post()
-                .uri("http://localhost:" + port + apiPath + "/register")
+                .uri(apiPath + "/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(objectMapper.writeValueAsString(register))
                 .exchange()
@@ -104,9 +103,8 @@ class AuthControllerIntegrationTest {
 
         String token = extractTokenFromJson(responseJson);
 
-        // 2. Перевіряємо, що /me повертає очікуваного користувача
         webTestClient.get()
-                .uri("http://localhost:" + port + apiPath + "/me")
+                .uri(apiPath + "/me")
                 .header("Authorization", "Bearer " + token)
                 .exchange()
                 .expectStatus().isOk()
@@ -117,8 +115,7 @@ class AuthControllerIntegrationTest {
 
     @Test
     void shouldLoginWithValidCredentials() throws Exception {
-        // Крок 1: реєструємо користувача
-        RegisterRequest register = new RegisterRequest("login_test@example.com", "password123", "local");
+        RegisterRequest register = new RegisterRequest("login_test@example.com", "password123");
         webTestClient.post()
                 .uri(apiPath + "/register")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -126,7 +123,6 @@ class AuthControllerIntegrationTest {
                 .exchange()
                 .expectStatus().isOk();
 
-        // Крок 2: логінимося з тими ж даними
         LoginRequest login = new LoginRequest("login_test@example.com", "password123");
         webTestClient.post()
                 .uri(apiPath + "/login")
@@ -140,19 +136,17 @@ class AuthControllerIntegrationTest {
 
     @Test
     void shouldRejectLoginWithInvalidPassword() throws Exception {
-        // Спочатку реєструємо користувача
-        RegisterRequest register = new RegisterRequest("invalidpass@example.com", "correctPassword", "local");
+        RegisterRequest register = new RegisterRequest("invalidpass@example.com", "correctPassword");
         webTestClient.post()
-                .uri("http://localhost:" + port + apiPath + "/register")
+                .uri(apiPath + "/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(objectMapper.writeValueAsString(register))
                 .exchange()
                 .expectStatus().isOk();
 
-        // Після цього пробуємо увійти з неправильним паролем
         LoginRequest login = new LoginRequest("invalidpass@example.com", "wrongPassword");
         webTestClient.post()
-                .uri("http://localhost:" + port + apiPath + "/login")
+                .uri(apiPath + "/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(objectMapper.writeValueAsString(login))
                 .exchange()
@@ -162,7 +156,7 @@ class AuthControllerIntegrationTest {
     @Test
     void shouldRejectAccessToMeWithoutToken() {
         webTestClient.get()
-                .uri("http://localhost:" + port + apiPath + "/me")
+                .uri(apiPath + "/me")
                 .exchange()
                 .expectStatus().isUnauthorized();
     }
@@ -178,8 +172,7 @@ class AuthControllerIntegrationTest {
 
     @Test
     void shouldReturnMeAfterLogin() throws Exception {
-        // Крок 1: реєструємо користувача
-        RegisterRequest register = new RegisterRequest("me_test@example.com", "password123", "local");
+        RegisterRequest register = new RegisterRequest("me_test@example.com", "password123");
         webTestClient.post()
                 .uri(apiPath + "/register")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -187,7 +180,6 @@ class AuthControllerIntegrationTest {
                 .exchange()
                 .expectStatus().isOk();
 
-        // Крок 2: логінимося
         LoginRequest login = new LoginRequest("me_test@example.com", "password123");
         byte[] tokenJson = webTestClient.post()
                 .uri(apiPath + "/login")
@@ -201,7 +193,6 @@ class AuthControllerIntegrationTest {
 
         String token = objectMapper.readTree(tokenJson).get("token").asText();
 
-        // Крок 3: звернення до /me з токеном
         webTestClient.get()
                 .uri(apiPath + "/me")
                 .header("Authorization", "Bearer " + token)
@@ -214,8 +205,7 @@ class AuthControllerIntegrationTest {
 
     @Test
     void shouldReturnCurrentUserInfo() throws Exception {
-        // Крок 1: реєстрація
-        RegisterRequest register = new RegisterRequest("current_user@example.com", "password456", "local");
+        RegisterRequest register = new RegisterRequest("current_user@example.com", "password456");
         webTestClient.post()
                 .uri(apiPath + "/register")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -223,7 +213,6 @@ class AuthControllerIntegrationTest {
                 .exchange()
                 .expectStatus().isOk();
 
-        // Крок 2: логін
         LoginRequest login = new LoginRequest("current_user@example.com", "password456");
         byte[] tokenJson = webTestClient.post()
                 .uri(apiPath + "/login")
@@ -237,7 +226,6 @@ class AuthControllerIntegrationTest {
 
         String token = objectMapper.readTree(tokenJson).get("token").asText();
 
-        // Крок 3: запит до /me
         webTestClient.get()
                 .uri(apiPath + "/me")
                 .header("Authorization", "Bearer " + token)
@@ -266,13 +254,12 @@ class AuthControllerIntegrationTest {
                 .uri(apiPath + "/me")
                 .header("Authorization", "Bearer invalid.jwt.token")
                 .exchange()
-                .expectStatus().isUnauthorized(); // ✅ правильний статус для невалідного токена
+                .expectStatus().isUnauthorized();
     }
 
     @Test
     void shouldRejectDuplicateEmailRegistration() throws Exception {
-        // Успішна реєстрація
-        RegisterRequest register = new RegisterRequest("duplicate@example.com", "password123", "local");
+        RegisterRequest register = new RegisterRequest("duplicate@example.com", "password123");
         webTestClient.post()
                 .uri(apiPath + "/register")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -280,7 +267,6 @@ class AuthControllerIntegrationTest {
                 .exchange()
                 .expectStatus().isOk();
 
-        // Повторна спроба — без cookie
         WebTestClient statelessClient = webTestClient.mutate()
                 .defaultCookie("JSESSIONID", "")
                 .build();
@@ -295,7 +281,6 @@ class AuthControllerIntegrationTest {
 
     @Test
     void shouldRejectRegisterWithoutEmail() throws Exception {
-        // Формуємо запит без email
         String requestJson = """
         {
             "password": "password123"
@@ -312,7 +297,6 @@ class AuthControllerIntegrationTest {
 
     @Test
     void shouldRejectRegisterWithMissingFields() throws Exception {
-        // Створюємо неповний JSON без email і provider
         String invalidPayload = """
         {
           "password": "password123"
@@ -327,14 +311,12 @@ class AuthControllerIntegrationTest {
                 .expectStatus().isBadRequest()
                 .expectBody()
                 .jsonPath("$.errors").isArray()
-                .jsonPath("$.errors[?(@ =~ /.*email.*/)]").exists()
-                .jsonPath("$.errors[?(@ =~ /.*provider.*/)]").exists();
+                .jsonPath("$.errors[?(@ =~ /.*email.*/)]").exists();
     }
 
     @Test
     void shouldReturn404IfUserNotFoundAfterTokenIssued() throws Exception {
-        // Крок 1: реєстрація
-        RegisterRequest register = new RegisterRequest("ghost@example.com", "password123", "local");
+        RegisterRequest register = new RegisterRequest("ghost@example.com", "password123");
         String token = objectMapper.readTree(
                 webTestClient.post()
                         .uri(apiPath + "/register")
@@ -347,10 +329,8 @@ class AuthControllerIntegrationTest {
                         .getResponseBodyContent()
         ).get("token").asText();
 
-        // Крок 2: вручну видаляємо користувача (через UserRepository)
         userRepository.deleteAll();
 
-        // Крок 3: запит до /me — має бути 404
         webTestClient.get()
                 .uri(apiPath + "/me")
                 .header("Authorization", "Bearer " + token)
@@ -360,8 +340,7 @@ class AuthControllerIntegrationTest {
 
     @Test
     void shouldReturnNotFoundIfUserDeletedAfterLogin() throws Exception {
-        // Крок 1: Реєстрація користувача
-        RegisterRequest register = new RegisterRequest("deleted@example.com", "password123", "local");
+        RegisterRequest register = new RegisterRequest("deleted@example.com", "password123");
         String tokenJson = new String(
                 webTestClient.post()
                         .uri(apiPath + "/register")
@@ -377,12 +356,10 @@ class AuthControllerIntegrationTest {
 
         String token = objectMapper.readTree(tokenJson).get("token").asText();
 
-        // Крок 2: Видаляємо користувача з бази
         User user = userRepository.findByEmailAndProvider("deleted@example.com", "local")
                 .orElseThrow();
         userRepository.delete(user);
 
-        // Крок 3: Запит до /me після видалення користувача
         webTestClient.get()
                 .uri(apiPath + "/me")
                 .header("Authorization", "Bearer " + token)
@@ -392,8 +369,7 @@ class AuthControllerIntegrationTest {
 
     @Test
     void shouldReturnNewTokenOnSecondLogin() throws Exception {
-        // Крок 1: реєструємо користувача
-        RegisterRequest register = new RegisterRequest("token_refresh@example.com", "password123", "local");
+        RegisterRequest register = new RegisterRequest("token_refresh@example.com", "password123");
         webTestClient.post()
                 .uri(apiPath + "/register")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -401,7 +377,6 @@ class AuthControllerIntegrationTest {
                 .exchange()
                 .expectStatus().isOk();
 
-        // Крок 2: перший логін
         LoginRequest login = new LoginRequest("token_refresh@example.com", "password123");
         byte[] firstLoginJson = webTestClient.post()
                 .uri(apiPath + "/login")
@@ -414,7 +389,6 @@ class AuthControllerIntegrationTest {
                 .getResponseBodyContent();
         String firstToken = objectMapper.readTree(firstLoginJson).get("token").asText();
 
-        // Крок 3: другий логін
         byte[] secondLoginJson = webTestClient.post()
                 .uri(apiPath + "/login")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -426,15 +400,13 @@ class AuthControllerIntegrationTest {
                 .getResponseBodyContent();
         String secondToken = objectMapper.readTree(secondLoginJson).get("token").asText();
 
-        // Перевірка: токени не мають бути однаковими
         assertThat(firstToken).isNotEqualTo(secondToken);
     }
 
     @Test
     void shouldRejectMeRequestWithExpiredToken() {
-        // Створюємо токен із exp у минулому
         Instant now = Instant.now();
-        Instant expired = now.minusSeconds(3600); // 1 година тому
+        Instant expired = now.minusSeconds(3600);
 
         String expiredToken = Jwts.builder()
                 .setSubject(UUID.randomUUID().toString())
@@ -445,7 +417,6 @@ class AuthControllerIntegrationTest {
                 .signWith(Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8)), SignatureAlgorithm.HS256)
                 .compact();
 
-        // Виклик до /me з простроченим токеном
         webTestClient.get()
                 .uri(apiPath + "/me")
                 .header("Authorization", "Bearer " + expiredToken)
@@ -455,11 +426,9 @@ class AuthControllerIntegrationTest {
 
     @Test
     void shouldRejectTokenSignedWithDifferentSecret() {
-        // Генеруємо інший секретний ключ
         String otherSecret = "anotherSecretKeyThatIsDifferent123!";
         Key otherKey = Keys.hmacShaKeyFor(otherSecret.getBytes(StandardCharsets.UTF_8));
 
-        // Створюємо токен з неправильним ключем
         String forgedToken = Jwts.builder()
                 .setSubject(UUID.randomUUID().toString())
                 .claim("email", "forged@example.com")
@@ -469,7 +438,6 @@ class AuthControllerIntegrationTest {
                 .signWith(otherKey, SignatureAlgorithm.HS256)
                 .compact();
 
-        // Очікуємо 401 Unauthorized
         webTestClient.get()
                 .uri(apiPath + "/me")
                 .header("Authorization", "Bearer " + forgedToken)
@@ -479,17 +447,15 @@ class AuthControllerIntegrationTest {
 
     @Test
     void shouldRejectMeWithInvalidUserIdInToken() throws Exception {
-        // 1. Генеруємо токен з невалідним UUID у полі sub (наприклад: "not-a-uuid")
         String invalidToken = Jwts.builder()
                 .setSubject("not-a-uuid")
                 .claim("email", "fake@example.com")
                 .claim("provider", "local")
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + 60 * 60 * 1000)) // 1 год
+                .setExpiration(new Date(System.currentTimeMillis() + 60 * 60 * 1000))
                 .signWith(Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8)), SignatureAlgorithm.HS256)
                 .compact();
 
-        // 2. Запит до /me з цим токеном
         webTestClient.get()
                 .uri(apiPath + "/me")
                 .header("Authorization", "Bearer " + invalidToken)
@@ -499,8 +465,7 @@ class AuthControllerIntegrationTest {
 
     @Test
     void shouldRejectMeWithMissingEmailInToken() {
-        // Створюємо користувача
-        RegisterRequest register = new RegisterRequest("noemailtoken@example.com", "password123", "local");
+        RegisterRequest register = new RegisterRequest("noemailtoken@example.com", "password123");
         webTestClient.post()
                 .uri(apiPath + "/register")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -508,10 +473,8 @@ class AuthControllerIntegrationTest {
                 .exchange()
                 .expectStatus().isOk();
 
-        // Беремо будь-який валідний UUID (можна навіть з DB, але тут просто для прикладу)
         String fakeId = UUID.randomUUID().toString();
 
-        // Створюємо токен БЕЗ claim "email"
         String tokenWithoutEmail = Jwts.builder()
                 .setSubject(fakeId)
                 .claim("provider", "local")
@@ -520,7 +483,6 @@ class AuthControllerIntegrationTest {
                 .signWith(Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8)), SignatureAlgorithm.HS256)
                 .compact();
 
-        // Звертаємось до /me
         webTestClient.get()
                 .uri(apiPath + "/me")
                 .header("Authorization", "Bearer " + tokenWithoutEmail)
@@ -530,8 +492,7 @@ class AuthControllerIntegrationTest {
 
     @Test
     void shouldReturnNotFoundIfEmailDoesNotMatchAnyUser() {
-        // Створюємо користувача
-        RegisterRequest register = new RegisterRequest("wrongemailtoken@example.com", "password123", "local");
+        RegisterRequest register = new RegisterRequest("wrongemailtoken@example.com", "password123");
         webTestClient.post()
                 .uri(apiPath + "/register")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -539,7 +500,6 @@ class AuthControllerIntegrationTest {
                 .exchange()
                 .expectStatus().isOk();
 
-        // Створюємо токен з існуючим UUID, але з фейковим email
         String userId = userRepository.findByEmailAndProvider("wrongemailtoken@example.com", "local")
                 .orElseThrow()
                 .getId()
@@ -547,14 +507,13 @@ class AuthControllerIntegrationTest {
 
         String tokenWithWrongEmail = Jwts.builder()
                 .setSubject(userId)
-                .claim("email", "not_exist@example.com") // неіснуючий email
+                .claim("email", "not_exist@example.com")
                 .claim("provider", "local")
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + 3600_000))
                 .signWith(Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8)), SignatureAlgorithm.HS256)
                 .compact();
 
-        // Очікуємо 404
         webTestClient.get()
                 .uri(apiPath + "/me")
                 .header("Authorization", "Bearer " + tokenWithWrongEmail)
@@ -564,8 +523,7 @@ class AuthControllerIntegrationTest {
 
     @Test
     void shouldIssueAccessAndRefreshTokenOnLogin() throws Exception {
-        // Крок 1: реєстрація користувача
-        RegisterRequest register = new RegisterRequest("refresh_login@example.com", "password123", "local");
+        RegisterRequest register = new RegisterRequest("refresh_login@example.com", "password123");
 
         webTestClient.post()
                 .uri(apiPath + "/register")
@@ -574,7 +532,6 @@ class AuthControllerIntegrationTest {
                 .exchange()
                 .expectStatus().isOk();
 
-        // Крок 2: логін
         LoginRequest login = new LoginRequest("refresh_login@example.com", "password123");
 
         byte[] responseBody = webTestClient.post()
@@ -597,8 +554,7 @@ class AuthControllerIntegrationTest {
 
     @Test
     void shouldReturnNewAccessTokenWithValidRefreshToken() throws Exception {
-        // 🔹 Реєструємо нового користувача
-        var register = new RegisterRequest("refresh_test@example.com", "password123", "local");
+        var register = new RegisterRequest("refresh_test@example.com", "password123");
         byte[] registerResponseBytes = webTestClient.post()
                 .uri(apiPath + "/register")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -611,12 +567,10 @@ class AuthControllerIntegrationTest {
 
         String registerResponse = new String(registerResponseBytes, StandardCharsets.UTF_8);
 
-        // 🔹 Парсимо токени
         JsonNode tokenNode = objectMapper.readTree(registerResponse);
         String oldAccessToken = tokenNode.get("token").asText();
         String refreshToken = tokenNode.get("refreshToken").asText();
 
-        // 🔹 Викликаємо /refresh
         var refreshRequest = new TokenRefreshRequest(refreshToken);
 
         byte[] refreshResponseBytes = webTestClient.post()
@@ -631,7 +585,6 @@ class AuthControllerIntegrationTest {
 
         String refreshResponse = new String(refreshResponseBytes, StandardCharsets.UTF_8);
 
-        // 🔹 Перевіряємо, що новий accessToken повернуто, і refreshToken той самий
         JsonNode refreshed = objectMapper.readTree(refreshResponse);
         String newAccessToken = refreshed.get("accessToken").asText();
         String returnedRefreshToken = refreshed.get("refreshToken").asText();
@@ -643,8 +596,7 @@ class AuthControllerIntegrationTest {
 
     @Test
     void shouldInvalidateRefreshTokenAfterLogout() throws Exception {
-        // 🔹 Реєстрація
-        var registerRequest = new RegisterRequest("logout_test@example.com", "password123", "local");
+        var registerRequest = new RegisterRequest("logout_test@example.com", "password123");
 
         byte[] registerResponseBytes = webTestClient.post()
                 .uri(apiPath + "/register")
@@ -660,13 +612,12 @@ class AuthControllerIntegrationTest {
         String accessToken = registerJson.get("token").asText();
         String refreshToken = registerJson.get("refreshToken").asText();
 
-        // 🔹 Logout (авторизований запит з accessToken)
         var refreshRequest = new TokenRefreshRequest(refreshToken);
 
         webTestClient.post()
                 .uri(apiPath + "/logout")
                 .contentType(MediaType.APPLICATION_JSON)
-                .headers(headers -> headers.setBearerAuth(accessToken)) // ⬅️ авторизація
+                .headers(headers -> headers.setBearerAuth(accessToken))
                 .bodyValue(objectMapper.writeValueAsString(refreshRequest))
                 .exchange()
                 .expectStatus().isOk()
@@ -674,7 +625,6 @@ class AuthControllerIntegrationTest {
                 .jsonPath("$.success").isEqualTo(true)
                 .jsonPath("$.message").isEqualTo("Logged out successfully");
 
-        // 🔹 Спроба використати видалений refreshToken
         webTestClient.post()
                 .uri(apiPath + "/refresh")
                 .contentType(MediaType.APPLICATION_JSON)

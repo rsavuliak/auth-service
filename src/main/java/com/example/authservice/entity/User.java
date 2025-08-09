@@ -14,17 +14,15 @@ public class User {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID id;
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String email;
 
-    // Nullable — використовується лише для локальної реєстрації
     @Column
     private String password;
 
     @Column(nullable = false)
-    private String provider; // Наприклад: 'local', 'google', 'github'
+    private String provider;
 
-    // Nullable — використовується лише для зовнішніх провайдерів
     @Column(name = "provider_id")
     private String providerId;
 
@@ -33,8 +31,6 @@ public class User {
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private RefreshToken refreshToken;
-
-    // ======== Constructors ========
 
     public User() {}
 
@@ -45,8 +41,6 @@ public class User {
         this.providerId = providerId;
         this.createdAt = Instant.now();
     }
-
-    // ======== Getters & Setters ========
 
     public UUID getId() {
         return id;

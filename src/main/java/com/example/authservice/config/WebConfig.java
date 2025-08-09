@@ -1,6 +1,8 @@
 package com.example.authservice.config;
 
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -9,9 +11,15 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/**") // Дозволити для всіх endpoints
-                .allowedOrigins("https://savuliak.com") // Дозволити з будь-якого домену
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS") // Які методи дозволені
-                .allowedHeaders("*"); // Які заголовки дозволені
+        registry.addMapping("/**")
+        //        .allowedOrigins("*")
+                .allowedOrigins("https://savuliak.com")
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                .allowedHeaders("*");
+    }
+
+    @Bean
+    public RestTemplate restTemplate() {
+        return new RestTemplate();
     }
 }
