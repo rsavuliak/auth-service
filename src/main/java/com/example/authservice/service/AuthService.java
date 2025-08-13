@@ -5,6 +5,8 @@ import com.example.authservice.dto.LoginRequest;
 import com.example.authservice.dto.RegisterRequest;
 import com.example.authservice.entity.User;
 import com.example.authservice.security.JwtService;
+import com.example.authservice.security.RefreshTokenService;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -30,7 +32,7 @@ public class AuthService {
 
         User user = userService.createUser(request.email(), request.password(), "local");
         String accessToken = jwtService.generateToken(user);
-        String refreshToken = refreshTokenService.create(user).getToken();
+        String refreshToken = refreshTokenService.createRefreshToken(user).getSecond();
         return new AuthResponse(accessToken, refreshToken);
     }
 
@@ -44,7 +46,7 @@ public class AuthService {
         }
 
         String accessToken = jwtService.generateToken(user);
-        String refreshToken = refreshTokenService.create(user).getToken();
+        String refreshToken = refreshTokenService.createRefreshToken(user).getSecond();
 
         return new AuthResponse(accessToken, refreshToken);
     }

@@ -5,10 +5,11 @@ import com.example.authservice.entity.RefreshToken;
 import com.example.authservice.entity.User;
 import com.example.authservice.security.JwtService;
 import com.example.authservice.service.AuthService;
-import com.example.authservice.service.RefreshTokenService;
+import com.example.authservice.security.RefreshTokenService;
 import com.example.authservice.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.util.Pair;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -23,7 +24,6 @@ public class AuthController {
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
     private final UserService userService;
-
 
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
@@ -54,10 +54,11 @@ public class AuthController {
     @PostMapping("/refresh")
     public ResponseEntity<TokenRefreshResponse> refreshToken(@RequestBody TokenRefreshRequest request) {
         String requestRefreshToken = request.refreshToken();
-        RefreshToken token = refreshTokenService.verifyExpiration(refreshTokenService.findByToken(requestRefreshToken));
-        String newAccessToken = jwtService.generateToken(token.getUser());
+        Pair<RefreshToken, String> tokenData = refreshTokenService.replaceRefreshToken(requestRefreshToken);
+        String refreshToken = tokenData.getSecond();
+        String newAccessToken = jwtService.generateToken(tokenData.getFirst().getUser());
 
-        return ResponseEntity.ok(new TokenRefreshResponse(newAccessToken, token.getToken()));
+        return ResponseEntity.ok(new TokenRefreshResponse(newAccessToken,  refreshToken));
     }
 
     @PostMapping("/logout")

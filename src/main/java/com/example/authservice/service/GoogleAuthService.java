@@ -5,6 +5,7 @@ import com.example.authservice.dto.GoogleTokenResponse;
 import com.example.authservice.dto.GoogleUserInfo;
 import com.example.authservice.entity.User;
 import com.example.authservice.security.JwtService;
+import com.example.authservice.security.RefreshTokenService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
@@ -38,7 +39,7 @@ public class GoogleAuthService {
         User user = findOrCreateUser(userInfo.getEmail());
 
         String accessToken = jwtService.generateToken(user);
-        String refreshToken = refreshTokenService.create(user).getToken();
+        String refreshToken = refreshTokenService.createRefreshToken(user).getSecond();
 
         return new AuthResponse(accessToken, refreshToken);
     }

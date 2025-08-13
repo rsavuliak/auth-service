@@ -12,16 +12,22 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface RefreshTokenRepository extends JpaRepository<RefreshToken, UUID> {
-    Optional<RefreshToken> findByToken(String token);
-
     Optional<RefreshToken> findByUser(User user);
 
+    Optional<RefreshToken> findByTokenId(String tokenId);
+
     @Modifying
+    @Transactional
     @Query("DELETE FROM RefreshToken rt WHERE rt.user.id = :userId")
     void deleteByUserId(@Param("userId") UUID userId);
 
     @Modifying
     @Transactional
-    @Query("DELETE FROM RefreshToken rt WHERE rt.token = :token")
-    void deleteByTokenValue(@Param("token") String token);
+    @Query("DELETE FROM RefreshToken rt WHERE rt.tokenHash = :tokenHash")
+    void deleteByTokenHashValue(@Param("tokenHash") String tokenHash);
+
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM RefreshToken rt WHERE rt.tokenId = :tokenId")
+    void deleteByTokenId(@Param("tokenId") String tokenId);
 }
