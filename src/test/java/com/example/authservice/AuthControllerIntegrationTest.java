@@ -591,7 +591,7 @@ class AuthControllerIntegrationTest {
 
         assertThat(newAccessToken).isNotBlank();
         assertThat(newAccessToken).isNotEqualTo(oldAccessToken);
-        assertThat(returnedRefreshToken).isEqualTo(refreshToken);
+        assertThat(returnedRefreshToken).isNotEqualTo(refreshToken);
     }
 
     @Test
