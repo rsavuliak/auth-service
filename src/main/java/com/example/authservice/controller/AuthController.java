@@ -84,8 +84,8 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<?> logout(@RequestBody TokenRefreshRequest request) {
-        refreshTokenService.deleteByToken(request.refreshToken());
+    public ResponseEntity<?> logout(@RequestBody TokenRefreshRequest request, HttpServletRequest servletRequest, HttpServletResponse servletResponse) {
+        refreshTokenService.deleteByToken(getRefreshTokenFromCookie(servletRequest));
         return ResponseEntity.ok(new ApiResponse(true, "Logged out successfully"));
     }
 
