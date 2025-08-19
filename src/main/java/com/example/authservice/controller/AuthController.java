@@ -6,8 +6,8 @@ import com.example.authservice.entity.User;
 import com.example.authservice.security.JwtService;
 import com.example.authservice.service.AuthService;
 import com.example.authservice.security.RefreshTokenService;
+import com.example.authservice.service.CookieService;
 import com.example.authservice.service.UserService;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -18,8 +18,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.Duration;
-
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
@@ -29,23 +27,22 @@ public class AuthController {
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
     private final UserService userService;
+    private final CookieService cookieService;
 
     @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request, HttpServletRequest servletRequest, HttpServletResponse servletResponse) {
+    public ResponseEntity<Void> register(@Valid @RequestBody RegisterRequest request, HttpServletResponse servletResponse) {
         AuthResponse authResponse = authService.register(request);
-
-        setRefreshToken(authResponse.refreshToken(), servletResponse);
-
-        return ResponseEntity.ok(authResponse);
+        cookieService.setAccessToken(authResponse.token(), servletResponse);
+        cookieService.setRefreshToken(authResponse.refreshToken(), servletResponse);
+        return ResponseEntity.ok().build();
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@RequestBody @Valid LoginRequest request, HttpServletRequest servletRequest, HttpServletResponse servletResponse) {
+    public ResponseEntity<Void> login(@RequestBody @Valid LoginRequest request, HttpServletResponse servletResponse) {
         AuthResponse authResponse = authService.login(request);
-
-        setRefreshToken(authResponse.refreshToken(), servletResponse);
-
-        return ResponseEntity.ok(authResponse);
+        cookieService.setAccessToken(authResponse.token(), servletResponse);
+        cookieService.setRefreshToken(authResponse.refreshToken(), servletResponse);
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping("/me")
@@ -65,48 +62,24 @@ public class AuthController {
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<TokenRefreshResponse> refreshToken(@RequestBody TokenRefreshRequest request, HttpServletRequest servletRequest, HttpServletResponse servletResponse) {
-        String requestRefreshToken = getRefreshTokenFromCookie(servletRequest);
-
-        System.out.println();
-        System.out.println();
-        System.out.println("------> Token from Cookie : " + requestRefreshToken);
-        System.out.println();
-        System.out.println();
+    public ResponseEntity<Void> refreshToken(HttpServletRequest servletRequest, HttpServletResponse servletResponse) {
+        String requestRefreshToken = cookieService.getRefreshTokenFromCookie(servletRequest);
 
         Pair<RefreshToken, String> tokenData = refreshTokenService.replaceRefreshToken(requestRefreshToken);
         String refreshToken = tokenData.getSecond();
         String newAccessToken = jwtService.generateToken(tokenData.getFirst().getUser());
 
-        setRefreshToken(refreshToken, servletResponse);
+        cookieService.setAccessToken(newAccessToken, servletResponse);
+        cookieService.setRefreshToken(refreshToken, servletResponse);
 
-        return ResponseEntity.ok(new TokenRefreshResponse(newAccessToken,  refreshToken));
+        return ResponseEntity.ok().build();
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<?> logout(@RequestBody TokenRefreshRequest request, HttpServletRequest servletRequest, HttpServletResponse servletResponse) {
-        refreshTokenService.deleteByToken(getRefreshTokenFromCookie(servletRequest));
+    public ResponseEntity<?> logout(HttpServletRequest servletRequest, HttpServletResponse servletResponse) {
+        refreshTokenService.deleteByToken(cookieService.getRefreshTokenFromCookie(servletRequest));
+        servletResponse.addCookie(cookieService.createHttpOnlyCookie("refreshToken", "", 0));
+        servletResponse.addCookie(cookieService.createHttpOnlyCookie("token", "", 0));
         return ResponseEntity.ok(new ApiResponse(true, "Logged out successfully"));
-    }
-
-    public String getRefreshTokenFromCookie(HttpServletRequest request) {
-        if (request.getCookies() != null) {
-            for (Cookie cookie : request.getCookies()) {
-                if ("refreshToken".equals(cookie.getName())) {
-                    return cookie.getValue();
-                }
-            }
-        }
-        return null;
-    }
-
-    public void setRefreshToken(String refreshToken, HttpServletResponse servletResponse) {
-        Cookie cookie = new Cookie("refreshToken", refreshToken);
-        cookie.setHttpOnly(true);
-        cookie.setSecure(true);
-        cookie.setPath("/");
-        cookie.setMaxAge((int) Duration.ofDays(30).getSeconds());
-        cookie.setAttribute("SameSite", "Strict");
-        servletResponse.addCookie(cookie);
     }
 }
