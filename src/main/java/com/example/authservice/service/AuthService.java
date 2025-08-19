@@ -6,7 +6,6 @@ import com.example.authservice.dto.RegisterRequest;
 import com.example.authservice.entity.User;
 import com.example.authservice.security.JwtService;
 import com.example.authservice.security.RefreshTokenService;
-import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;

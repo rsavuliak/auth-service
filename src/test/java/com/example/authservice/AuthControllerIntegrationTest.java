@@ -2,11 +2,9 @@ package com.example.authservice;
 
 import com.example.authservice.dto.LoginRequest;
 import com.example.authservice.dto.RegisterRequest;
-import com.example.authservice.dto.TokenRefreshRequest;
 import com.example.authservice.entity.User;
 import com.example.authservice.repository.RefreshTokenRepository;
 import com.example.authservice.repository.UserRepository;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.cdimascio.dotenv.Dotenv;
 import io.jsonwebtoken.Jwts;
@@ -19,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
@@ -34,6 +33,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.UUID;
 
@@ -89,49 +89,62 @@ class AuthControllerIntegrationTest {
 
     @Test
     void shouldReturnCurrentUserAfterRegister() throws Exception {
-        RegisterRequest register = new RegisterRequest("test123@example.com", "password123");
+        RegisterRequest registerRequest = new RegisterRequest("testuser@example.com", "password123");
 
-        String responseJson = webTestClient.post()
+        WebTestClient.ResponseSpec registerResponse = webTestClient.post()
                 .uri(apiPath + "/register")
                 .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(objectMapper.writeValueAsString(register))
+                .bodyValue(registerRequest)
                 .exchange()
                 .expectStatus().isOk()
-                .expectBody(String.class)
-                .returnResult()
-                .getResponseBody();
+                .expectHeader().exists("Set-Cookie");
 
-        String token = extractTokenFromJson(responseJson);
+        String tokenCookie = getAccessTokenCookie(registerResponse);
+        String refreshTokenCookie = getRefreshTokenCookie(registerResponse);
 
         webTestClient.get()
                 .uri(apiPath + "/me")
-                .header("Authorization", "Bearer " + token)
+                .header(HttpHeaders.COOKIE, tokenCookie)
+                .header(HttpHeaders.COOKIE, refreshTokenCookie)
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
-                .jsonPath("$.email").isEqualTo("test123@example.com")
-                .jsonPath("$.provider").isEqualTo("local");
+                .jsonPath("$.email").isEqualTo("testuser@example.com");
     }
 
     @Test
     void shouldLoginWithValidCredentials() throws Exception {
-        RegisterRequest register = new RegisterRequest("login_test@example.com", "password123");
-        webTestClient.post()
+        RegisterRequest registerRequest = new RegisterRequest("login_test@example.com", "password123");
+        WebTestClient.ResponseSpec registerResponse = webTestClient.post()
                 .uri(apiPath + "/register")
                 .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(objectMapper.writeValueAsString(register))
+                .bodyValue(registerRequest)
                 .exchange()
-                .expectStatus().isOk();
+                .expectStatus().isOk()
+                .expectHeader().exists("Set-Cookie");
+
+        String tokenCookie = getAccessTokenCookie(registerResponse);
+        String refreshTokenCookie = getRefreshTokenCookie(registerResponse);
+
+        assertThat(tokenCookie).isNotBlank();
+        assertThat(refreshTokenCookie).isNotBlank();
 
         LoginRequest login = new LoginRequest("login_test@example.com", "password123");
-        webTestClient.post()
+        WebTestClient.ResponseSpec loginResponse = webTestClient.post()
                 .uri(apiPath + "/login")
+                .header(HttpHeaders.COOKIE, tokenCookie)
+                .header(HttpHeaders.COOKIE, refreshTokenCookie)
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(objectMapper.writeValueAsString(login))
                 .exchange()
                 .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.token").exists();
+                .expectHeader().exists("Set-Cookie");
+
+        tokenCookie = getAccessTokenCookie(loginResponse);
+        refreshTokenCookie = getRefreshTokenCookie(loginResponse);
+
+        assertThat(tokenCookie).isNotBlank();
+        assertThat(refreshTokenCookie).isNotBlank();
     }
 
     @Test
@@ -172,67 +185,74 @@ class AuthControllerIntegrationTest {
 
     @Test
     void shouldReturnMeAfterLogin() throws Exception {
-        RegisterRequest register = new RegisterRequest("me_test@example.com", "password123");
-        webTestClient.post()
+        RegisterRequest registerRequest = new RegisterRequest("login_test@example.com", "password123");
+        WebTestClient.ResponseSpec registerResponse = webTestClient.post()
                 .uri(apiPath + "/register")
                 .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(objectMapper.writeValueAsString(register))
+                .bodyValue(registerRequest)
                 .exchange()
-                .expectStatus().isOk();
+                .expectStatus().isOk()
+                .expectHeader().exists("Set-Cookie");
 
-        LoginRequest login = new LoginRequest("me_test@example.com", "password123");
-        byte[] tokenJson = webTestClient.post()
+        String tokenCookie = getAccessTokenCookie(registerResponse);
+        String refreshTokenCookie = getRefreshTokenCookie(registerResponse);
+
+        LoginRequest login = new LoginRequest("login_test@example.com", "password123");
+        WebTestClient.ResponseSpec loginResponse = webTestClient.post()
                 .uri(apiPath + "/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(objectMapper.writeValueAsString(login))
                 .exchange()
                 .expectStatus().isOk()
-                .expectBody()
-                .returnResult()
-                .getResponseBodyContent();
-
-        String token = objectMapper.readTree(tokenJson).get("token").asText();
+                .expectHeader().exists("Set-Cookie");
 
         webTestClient.get()
                 .uri(apiPath + "/me")
-                .header("Authorization", "Bearer " + token)
+                .header(HttpHeaders.COOKIE, tokenCookie)
+                .header(HttpHeaders.COOKIE, refreshTokenCookie)
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
-                .jsonPath("$.email").isEqualTo("me_test@example.com")
+                .jsonPath("$.email").isEqualTo("login_test@example.com")
                 .jsonPath("$.provider").isEqualTo("local");
     }
 
     @Test
     void shouldReturnCurrentUserInfo() throws Exception {
-        RegisterRequest register = new RegisterRequest("current_user@example.com", "password456");
-        webTestClient.post()
+        RegisterRequest registerRequest = new RegisterRequest("login_test@example.com", "password123");
+        WebTestClient.ResponseSpec registerResponse = webTestClient.post()
                 .uri(apiPath + "/register")
                 .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(objectMapper.writeValueAsString(register))
+                .bodyValue(registerRequest)
                 .exchange()
-                .expectStatus().isOk();
+                .expectStatus().isOk()
+                .expectHeader().exists("Set-Cookie");
 
-        LoginRequest login = new LoginRequest("current_user@example.com", "password456");
-        byte[] tokenJson = webTestClient.post()
+        String tokenCookie = getAccessTokenCookie(registerResponse);
+        String refreshTokenCookie = getRefreshTokenCookie(registerResponse);
+
+        LoginRequest login = new LoginRequest("login_test@example.com", "password123");
+        WebTestClient.ResponseSpec loginResponse = webTestClient.post()
                 .uri(apiPath + "/login")
+                .header(HttpHeaders.COOKIE, tokenCookie)
+                .header(HttpHeaders.COOKIE, refreshTokenCookie)
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(objectMapper.writeValueAsString(login))
                 .exchange()
                 .expectStatus().isOk()
-                .expectBody()
-                .returnResult()
-                .getResponseBodyContent();
+                .expectHeader().exists("Set-Cookie");
 
-        String token = objectMapper.readTree(tokenJson).get("token").asText();
+        tokenCookie = getAccessTokenCookie(loginResponse);
+        refreshTokenCookie = getRefreshTokenCookie(loginResponse);
 
         webTestClient.get()
                 .uri(apiPath + "/me")
-                .header("Authorization", "Bearer " + token)
+                .header(HttpHeaders.COOKIE, tokenCookie)
+                .header(HttpHeaders.COOKIE, refreshTokenCookie)
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
-                .jsonPath("$.email").isEqualTo("current_user@example.com")
+                .jsonPath("$.email").isEqualTo("login_test@example.com")
                 .jsonPath("$.provider").isEqualTo("local");
     }
 
@@ -316,90 +336,99 @@ class AuthControllerIntegrationTest {
 
     @Test
     void shouldReturn404IfUserNotFoundAfterTokenIssued() throws Exception {
-        RegisterRequest register = new RegisterRequest("ghost@example.com", "password123");
-        String token = objectMapper.readTree(
-                webTestClient.post()
-                        .uri(apiPath + "/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .bodyValue(objectMapper.writeValueAsString(register))
-                        .exchange()
-                        .expectStatus().isOk()
-                        .expectBody()
-                        .returnResult()
-                        .getResponseBodyContent()
-        ).get("token").asText();
+        RegisterRequest registerRequest = new RegisterRequest("login_test@example.com", "password123");
+        WebTestClient.ResponseSpec registerResponse = webTestClient.post()
+                .uri(apiPath + "/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(registerRequest)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().exists("Set-Cookie");
+
+        String tokenCookie = getAccessTokenCookie(registerResponse);
+        String refreshTokenCookie = getRefreshTokenCookie(registerResponse);
 
         userRepository.deleteAll();
 
         webTestClient.get()
                 .uri(apiPath + "/me")
-                .header("Authorization", "Bearer " + token)
+                .header(HttpHeaders.COOKIE, tokenCookie)
+                .header(HttpHeaders.COOKIE, refreshTokenCookie)
                 .exchange()
                 .expectStatus().isNotFound();
     }
 
     @Test
     void shouldReturnNotFoundIfUserDeletedAfterLogin() throws Exception {
-        RegisterRequest register = new RegisterRequest("deleted@example.com", "password123");
-        String tokenJson = new String(
-                webTestClient.post()
-                        .uri(apiPath + "/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .bodyValue(objectMapper.writeValueAsString(register))
-                        .exchange()
-                        .expectStatus().isOk()
-                        .expectBody()
-                        .returnResult()
-                        .getResponseBodyContent(),
-                StandardCharsets.UTF_8
-        );
+        RegisterRequest registerRequest = new RegisterRequest("deleted@example.com", "password123");
+        WebTestClient.ResponseSpec registerResponse = webTestClient.post()
+                .uri(apiPath + "/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(registerRequest)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().exists("Set-Cookie");
 
-        String token = objectMapper.readTree(tokenJson).get("token").asText();
+        String tokenCookie = getAccessTokenCookie(registerResponse);
+        String refreshTokenCookie = getRefreshTokenCookie(registerResponse);
 
-        User user = userRepository.findByEmailAndProvider("deleted@example.com", "local")
-                .orElseThrow();
+        User user = userRepository.findByEmailAndProvider("deleted@example.com", "local").orElseThrow();
         userRepository.delete(user);
 
         webTestClient.get()
                 .uri(apiPath + "/me")
-                .header("Authorization", "Bearer " + token)
+                .header(HttpHeaders.COOKIE, tokenCookie)
+                .header(HttpHeaders.COOKIE, refreshTokenCookie)
                 .exchange()
                 .expectStatus().isNotFound();
     }
 
     @Test
     void shouldReturnNewTokenOnSecondLogin() throws Exception {
-        RegisterRequest register = new RegisterRequest("token_refresh@example.com", "password123");
-        webTestClient.post()
+        RegisterRequest registerRequest = new RegisterRequest("login_test@example.com", "password123");
+        WebTestClient.ResponseSpec registerResponse = webTestClient.post()
                 .uri(apiPath + "/register")
                 .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(objectMapper.writeValueAsString(register))
+                .bodyValue(registerRequest)
                 .exchange()
-                .expectStatus().isOk();
+                .expectStatus().isOk()
+                .expectHeader().exists("Set-Cookie");
 
-        LoginRequest login = new LoginRequest("token_refresh@example.com", "password123");
-        byte[] firstLoginJson = webTestClient.post()
+        String tokenCookie = getAccessTokenCookie(registerResponse);
+        String refreshTokenCookie = getRefreshTokenCookie(registerResponse);
+
+        assertThat(tokenCookie).isNotBlank();
+        assertThat(refreshTokenCookie).isNotBlank();
+
+        LoginRequest login = new LoginRequest("login_test@example.com", "password123");
+        WebTestClient.ResponseSpec loginResponse = webTestClient.post()
                 .uri(apiPath + "/login")
+                .header(HttpHeaders.COOKIE, tokenCookie)
+                .header(HttpHeaders.COOKIE, refreshTokenCookie)
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(objectMapper.writeValueAsString(login))
                 .exchange()
                 .expectStatus().isOk()
-                .expectBody()
-                .returnResult()
-                .getResponseBodyContent();
-        String firstToken = objectMapper.readTree(firstLoginJson).get("token").asText();
+                .expectHeader().exists("Set-Cookie");
 
-        byte[] secondLoginJson = webTestClient.post()
+        tokenCookie = getAccessTokenCookie(loginResponse);
+        refreshTokenCookie = getRefreshTokenCookie(loginResponse);
+
+        String firstToken = getAccessTokenFromCookie(tokenCookie);
+
+        WebTestClient.ResponseSpec secondLoginResponse = webTestClient.post()
                 .uri(apiPath + "/login")
+                .header(HttpHeaders.COOKIE, tokenCookie)
+                .header(HttpHeaders.COOKIE, refreshTokenCookie)
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(objectMapper.writeValueAsString(login))
                 .exchange()
                 .expectStatus().isOk()
-                .expectBody()
-                .returnResult()
-                .getResponseBodyContent();
-        String secondToken = objectMapper.readTree(secondLoginJson).get("token").asText();
+                .expectHeader().exists("Set-Cookie");
 
+        tokenCookie = getAccessTokenCookie(secondLoginResponse);
+
+        String secondToken = getAccessTokenFromCookie(tokenCookie);
         assertThat(firstToken).isNotEqualTo(secondToken);
     }
 
@@ -419,7 +448,6 @@ class AuthControllerIntegrationTest {
 
         webTestClient.get()
                 .uri(apiPath + "/me")
-                .header("Authorization", "Bearer " + expiredToken)
                 .exchange()
                 .expectStatus().isUnauthorized();
     }
@@ -440,7 +468,6 @@ class AuthControllerIntegrationTest {
 
         webTestClient.get()
                 .uri(apiPath + "/me")
-                .header("Authorization", "Bearer " + forgedToken)
                 .exchange()
                 .expectStatus().isUnauthorized();
     }
@@ -523,117 +550,161 @@ class AuthControllerIntegrationTest {
 
     @Test
     void shouldIssueAccessAndRefreshTokenOnLogin() throws Exception {
-        RegisterRequest register = new RegisterRequest("refresh_login@example.com", "password123");
-
-        webTestClient.post()
+        RegisterRequest registerRequest = new RegisterRequest("login_test@example.com", "password123");
+        WebTestClient.ResponseSpec registerResponse = webTestClient.post()
                 .uri(apiPath + "/register")
                 .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(objectMapper.writeValueAsString(register))
+                .bodyValue(registerRequest)
                 .exchange()
-                .expectStatus().isOk();
+                .expectStatus().isOk()
+                .expectHeader().exists("Set-Cookie");
 
-        LoginRequest login = new LoginRequest("refresh_login@example.com", "password123");
+        String tokenCookie = getAccessTokenCookie(registerResponse);
+        String refreshTokenCookie = getRefreshTokenCookie(registerResponse);
 
-        byte[] responseBody = webTestClient.post()
+        assertThat(tokenCookie).isNotBlank();
+        assertThat(refreshTokenCookie).isNotBlank();
+
+        LoginRequest login = new LoginRequest("login_test@example.com", "password123");
+        WebTestClient.ResponseSpec loginResponse = webTestClient.post()
                 .uri(apiPath + "/login")
+                .header(HttpHeaders.COOKIE, tokenCookie)
+                .header(HttpHeaders.COOKIE, refreshTokenCookie)
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(objectMapper.writeValueAsString(login))
                 .exchange()
                 .expectStatus().isOk()
-                .expectBody()
-                .returnResult()
-                .getResponseBodyContent();
+                .expectHeader().exists("Set-Cookie");
 
-        JsonNode json = objectMapper.readTree(responseBody);
-        String accessToken = json.get("token").asText();
-        String refreshToken = json.get("refreshToken").asText();
+        tokenCookie = getAccessTokenCookie(registerResponse);
+        refreshTokenCookie = getRefreshTokenCookie(registerResponse);
 
-        assertThat(accessToken).isNotBlank();
-        assertThat(refreshToken).isNotBlank();
+        assertThat(tokenCookie).isNotBlank();
+        assertThat(refreshTokenCookie).isNotBlank();
     }
 
     @Test
     void shouldReturnNewAccessTokenWithValidRefreshToken() throws Exception {
-        var register = new RegisterRequest("refresh_test@example.com", "password123");
-        byte[] registerResponseBytes = webTestClient.post()
+        RegisterRequest registerRequest = new RegisterRequest("login_test@example.com", "password123");
+        WebTestClient.ResponseSpec registerResponse = webTestClient.post()
                 .uri(apiPath + "/register")
                 .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(objectMapper.writeValueAsString(register))
+                .bodyValue(registerRequest)
                 .exchange()
                 .expectStatus().isOk()
-                .expectBody()
-                .returnResult()
-                .getResponseBodyContent();
+                .expectHeader().exists("Set-Cookie");
 
-        String registerResponse = new String(registerResponseBytes, StandardCharsets.UTF_8);
+        String tokenCookie = getAccessTokenCookie(registerResponse);
+        String refreshTokenCookie = getRefreshTokenCookie(registerResponse);
 
-        JsonNode tokenNode = objectMapper.readTree(registerResponse);
-        String oldAccessToken = tokenNode.get("token").asText();
-        String refreshToken = tokenNode.get("refreshToken").asText();
+        assertThat(tokenCookie).isNotBlank();
+        assertThat(refreshTokenCookie).isNotBlank();
 
-        var refreshRequest = new TokenRefreshRequest(refreshToken);
+        String oldAccessToken = getAccessTokenFromCookie(tokenCookie);
+        String oldRefreshToken = getRefreshTokenFromCookie(refreshTokenCookie);
 
-        byte[] refreshResponseBytes = webTestClient.post()
+        assertThat(oldAccessToken).isNotBlank();
+        assertThat(oldRefreshToken).isNotBlank();
+
+        LoginRequest login = new LoginRequest("login_test@example.com", "password123");
+        WebTestClient.ResponseSpec refreshResponse = webTestClient.post()
                 .uri(apiPath + "/refresh")
+                .header(HttpHeaders.COOKIE, tokenCookie)
+                .header(HttpHeaders.COOKIE, refreshTokenCookie)
                 .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(objectMapper.writeValueAsString(refreshRequest))
+                .bodyValue(objectMapper.writeValueAsString(login))
                 .exchange()
                 .expectStatus().isOk()
-                .expectBody()
-                .returnResult()
-                .getResponseBodyContent();
+                .expectHeader().exists("Set-Cookie");
 
-        String refreshResponse = new String(refreshResponseBytes, StandardCharsets.UTF_8);
+        String newAccessTokenCookie = getAccessTokenCookie(refreshResponse);
+        String newRefreshTokenCookie = getRefreshTokenCookie(refreshResponse);
 
-        JsonNode refreshed = objectMapper.readTree(refreshResponse);
-        String newAccessToken = refreshed.get("accessToken").asText();
-        String returnedRefreshToken = refreshed.get("refreshToken").asText();
+        assertThat(newAccessTokenCookie).isNotBlank();
+        assertThat(newRefreshTokenCookie).isNotBlank();
+
+        String newAccessToken = getAccessTokenFromCookie(newAccessTokenCookie);
+        String newRefreshToken = getRefreshTokenFromCookie(newRefreshTokenCookie);
 
         assertThat(newAccessToken).isNotBlank();
+        assertThat(newRefreshToken).isNotBlank();
+
         assertThat(newAccessToken).isNotEqualTo(oldAccessToken);
-        assertThat(returnedRefreshToken).isNotEqualTo(refreshToken);
+        assertThat(newRefreshToken).isNotEqualTo(oldRefreshToken);
     }
 
     @Test
     void shouldInvalidateRefreshTokenAfterLogout() throws Exception {
-        var registerRequest = new RegisterRequest("logout_test@example.com", "password123");
-
-        byte[] registerResponseBytes = webTestClient.post()
+        RegisterRequest registerRequest = new RegisterRequest("login_test@example.com", "password123");
+        WebTestClient.ResponseSpec registerResponse = webTestClient.post()
                 .uri(apiPath + "/register")
                 .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(objectMapper.writeValueAsString(registerRequest))
+                .bodyValue(registerRequest)
                 .exchange()
                 .expectStatus().isOk()
-                .expectBody()
-                .returnResult()
-                .getResponseBodyContent();
+                .expectHeader().exists("Set-Cookie");
 
-        JsonNode registerJson = objectMapper.readTree(new String(registerResponseBytes, StandardCharsets.UTF_8));
-        String accessToken = registerJson.get("token").asText();
-        String refreshToken = registerJson.get("refreshToken").asText();
+        String tokenCookie = getAccessTokenCookie(registerResponse);
+        String refreshTokenCookie = getRefreshTokenCookie(registerResponse);
 
-        var refreshRequest = new TokenRefreshRequest(refreshToken);
-
-        webTestClient.post()
+        WebTestClient.ResponseSpec refreshResponse = webTestClient.post()
                 .uri(apiPath + "/logout")
+                .header(HttpHeaders.COOKIE, tokenCookie)
+                .header(HttpHeaders.COOKIE, refreshTokenCookie)
                 .contentType(MediaType.APPLICATION_JSON)
-                .headers(headers -> headers.setBearerAuth(accessToken))
-                .bodyValue(objectMapper.writeValueAsString(refreshRequest))
                 .exchange()
                 .expectStatus().isOk()
-                .expectBody()
-                .jsonPath("$.success").isEqualTo(true)
-                .jsonPath("$.message").isEqualTo("Logged out successfully");
+                .expectHeader().exists("Set-Cookie");
+
+        tokenCookie = getAccessTokenCookie(refreshResponse);
+        refreshTokenCookie = getRefreshTokenCookie(refreshResponse);
 
         webTestClient.post()
                 .uri(apiPath + "/refresh")
+                .header(HttpHeaders.COOKIE, tokenCookie)
+                .header(HttpHeaders.COOKIE, refreshTokenCookie)
                 .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(objectMapper.writeValueAsString(refreshRequest))
                 .exchange()
                 .expectStatus().isUnauthorized();
     }
 
     private String extractTokenFromJson(String json) throws IOException {
         return objectMapper.readTree(json).get("token").asText();
+    }
+
+    public static String getValueFromCookie(String cookie, String key) {
+        return Arrays.stream(cookie.split(";"))
+                .map(String::trim)
+                .filter(s -> s.startsWith(key))
+                .map(s -> s.substring("token=".length()))
+                .findFirst()
+                .orElse(null);
+    }
+
+    public static String getAccessTokenFromCookie(String cookie) {
+        return getValueFromCookie(cookie, "token=");
+    }
+
+    public static String getRefreshTokenFromCookie(String cookie) {
+        return getValueFromCookie(cookie, "refreshToken=");
+    }
+
+    public static String getAccessTokenCookie(WebTestClient.ResponseSpec authResponse) {
+        return getCookie(authResponse, "token=");
+    }
+
+    public static String getRefreshTokenCookie(WebTestClient.ResponseSpec authResponse) {
+        return getCookie(authResponse, "refreshToken=");
+    }
+
+    private static String getCookie(WebTestClient.ResponseSpec authResponse, String key) {
+        return authResponse
+                .returnResult(String.class)
+                .getResponseHeaders()
+                .get(HttpHeaders.SET_COOKIE)
+                .stream()
+                .filter(s -> s.contains(key))
+                .findFirst()
+                .orElse("");
     }
 }

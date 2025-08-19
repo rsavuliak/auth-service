@@ -3,7 +3,6 @@ package com.example.authservice;
 import com.example.authservice.dto.*;
 import com.example.authservice.repository.RefreshTokenRepository;
 import com.example.authservice.repository.UserRepository;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.cdimascio.dotenv.Dotenv;
 import org.junit.jupiter.api.BeforeAll;
@@ -15,6 +14,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -26,7 +26,8 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-import java.nio.charset.StandardCharsets;
+import static com.example.authservice.AuthControllerIntegrationTest.getAccessTokenCookie;
+import static com.example.authservice.AuthControllerIntegrationTest.getRefreshTokenCookie;
 
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -89,29 +90,25 @@ public class ExpiredRefreshTokenTest {
 
     @Test
     void shouldRejectExpiredRefreshToken() throws Exception {
-        var register = new RegisterRequest("expired_token_test@example.com", "password123");
-
-        byte[] responseBytes = webTestClient.post()
+        RegisterRequest registerRequest = new RegisterRequest("login_test@example.com", "password123");
+        WebTestClient.ResponseSpec registerResponse = webTestClient.post()
                 .uri(apiPath() + "/register")
                 .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(objectMapper.writeValueAsString(register))
+                .bodyValue(registerRequest)
                 .exchange()
                 .expectStatus().isOk()
-                .expectBody()
-                .returnResult()
-                .getResponseBodyContent();
+                .expectHeader().exists("Set-Cookie");
 
-        JsonNode node = objectMapper.readTree(new String(responseBytes, StandardCharsets.UTF_8));
-        String expiredRefreshToken = node.get("refreshToken").asText();
+        String tokenCookie = getAccessTokenCookie(registerResponse);
+        String refreshTokenCookie = getRefreshTokenCookie(registerResponse);
 
         Thread.sleep(200);
 
-        var request = new TokenRefreshRequest(expiredRefreshToken);
-
         webTestClient.post()
                 .uri(apiPath() + "/refresh")
+                .header(HttpHeaders.COOKIE, tokenCookie)
+                .header(HttpHeaders.COOKIE, refreshTokenCookie)
                 .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(objectMapper.writeValueAsString(request))
                 .exchange()
                 .expectStatus().isUnauthorized();
     }
