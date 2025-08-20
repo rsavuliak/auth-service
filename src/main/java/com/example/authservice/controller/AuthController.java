@@ -4,8 +4,8 @@ import com.example.authservice.dto.*;
 import com.example.authservice.entity.RefreshToken;
 import com.example.authservice.entity.User;
 import com.example.authservice.security.JwtService;
-import com.example.authservice.service.AuthService;
 import com.example.authservice.security.RefreshTokenService;
+import com.example.authservice.service.AuthService;
 import com.example.authservice.service.CookieService;
 import com.example.authservice.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -81,5 +81,15 @@ public class AuthController {
         servletResponse.addCookie(cookieService.createHttpOnlyCookie("refreshToken", "", 0));
         servletResponse.addCookie(cookieService.createHttpOnlyCookie("token", "", 0));
         return ResponseEntity.ok(new ApiResponse(true, "Logged out successfully"));
+    }
+
+    @DeleteMapping("/delete")
+    public ResponseEntity<Void> deleteAccount(HttpServletRequest servletRequest, HttpServletResponse servletResponse) {
+
+        String accessToken = cookieService.getAccessTokenFromCookie(servletRequest);
+        UserPrincipal userPrincipal = jwtService.extractUserPrincipal(accessToken);
+
+        userService.deleteById(userPrincipal.id());
+        return ResponseEntity.ok().build();
     }
 }

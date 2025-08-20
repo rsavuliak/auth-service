@@ -27,7 +27,6 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -36,6 +35,8 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -706,5 +707,38 @@ class AuthControllerIntegrationTest {
                 .filter(s -> s.contains(key))
                 .findFirst()
                 .orElse("");
+    }
+
+
+    @Test
+    void shouldDeleteUser() throws Exception {
+        RegisterRequest registerRequest = new RegisterRequest("login_test@example.com", "password123");
+        WebTestClient.ResponseSpec registerResponse = webTestClient.post()
+                .uri(apiPath + "/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(registerRequest)
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().exists("Set-Cookie");
+
+        String tokenCookie = getAccessTokenCookie(registerResponse);
+        String refreshTokenCookie = getRefreshTokenCookie(registerResponse);
+
+        WebTestClient.ResponseSpec refreshResponse = webTestClient.delete()
+                .uri(apiPath + "/delete")
+                .header(HttpHeaders.COOKIE, tokenCookie)
+                .header(HttpHeaders.COOKIE, refreshTokenCookie)
+                .exchange()
+                .expectStatus().isOk();
+
+        LoginRequest login = new LoginRequest("login_test@example.com", "password123");
+        webTestClient.post()
+                .uri(apiPath + "/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(objectMapper.writeValueAsString(login))
+                .exchange()
+                .expectStatus().isUnauthorized();
+
+        assertThat(userRepository.findByEmail("login_test@example.com").isPresent()).isFalse();
     }
 }

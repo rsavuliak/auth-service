@@ -2,6 +2,7 @@ package com.example.authservice.service;
 
 import com.example.authservice.entity.User;
 import com.example.authservice.repository.UserRepository;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -47,5 +48,11 @@ public class UserService {
         user.setCreatedAt(Instant.now());
         userRepository.save(user);
         return user;
+    }
+
+    @Transactional
+    public void deleteById(UUID userId) {
+        User user = findUserById(userId);
+        userRepository.delete(user);
     }
 }
