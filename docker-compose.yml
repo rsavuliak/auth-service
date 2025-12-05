@@ -21,8 +21,8 @@ services:
   auth-service:
     build: .
     environment:
-      - VIRTUAL_HOST=api.savuliak.com
-      - LETSENCRYPT_HOST=api.savuliak.com
+      - VIRTUAL_HOST=auth.savuliak.com
+      - LETSENCRYPT_HOST=auth.savuliak.com
       - LETSENCRYPT_EMAIL=savuliak.roman@gmail.com
     depends_on:
       - postgres
