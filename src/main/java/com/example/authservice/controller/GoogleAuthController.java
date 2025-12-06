@@ -29,7 +29,7 @@ public class GoogleAuthController {
         cookieService.setRefreshToken(tokens.refreshToken(), servletResponse);
 
         return ResponseEntity.status(HttpStatus.FOUND)
-                .header(HttpHeaders.LOCATION, "https://savuliak.com/")
+                .header(HttpHeaders.LOCATION, "https://auth.savuliak.com/")
                 .build();
     }
 }
