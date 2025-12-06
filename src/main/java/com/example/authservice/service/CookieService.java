@@ -35,7 +35,6 @@ public class CookieService {
         cookie.setSecure(true);
         cookie.setPath("/");
         cookie.setMaxAge(maxAge);
-        cookie.setDomain(".savuliak.com");
         cookie.setAttribute("SameSite", "None");
         return cookie;
     }
