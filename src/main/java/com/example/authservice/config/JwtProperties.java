@@ -11,5 +11,4 @@ public class JwtProperties {
     public JwtProperties(String secret) {
         this.secret = secret;
     }
-
 }
