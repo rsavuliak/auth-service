@@ -63,7 +63,11 @@ public class GoogleAuthService {
                 request,
                 GoogleTokenResponse.class
         );
-        return response.getBody();
+        GoogleTokenResponse body = response.getBody();
+        if (body == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Failed to get token from Google");
+        }
+        return body;
     }
 
     private GoogleUserInfo getUserInfoFromGoogle(String accessToken) {
@@ -78,8 +82,11 @@ public class GoogleAuthService {
                 request,
                 GoogleUserInfo.class
         );
-
-        return response.getBody();
+        GoogleUserInfo body = response.getBody();
+        if (body == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Failed to get user info from Google");
+        }
+        return body;
     }
 
     private User findOrCreateUser(String email) {

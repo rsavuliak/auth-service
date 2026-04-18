@@ -108,7 +108,9 @@ public class RefreshTokenService {
         return refreshTokenRepository.findByUser(user)
                 .filter(rt -> rt.getStatus() == RefreshToken.TokenStatus.ACTIVE)
                 .filter(rt -> rt.getExpiryDate().isAfter(clock.instant()))
-                .map(rt -> hashWithSalt(parseToken(rawToken), rt.getSalt()).equals(rt.getTokenHash()))
+                .map(rt -> MessageDigest.isEqual(
+                        hashWithSalt(parseToken(rawToken), rt.getSalt()).getBytes(StandardCharsets.UTF_8),
+                        rt.getTokenHash().getBytes(StandardCharsets.UTF_8)))
                 .orElse(false);
     }
 
@@ -119,7 +121,9 @@ public class RefreshTokenService {
         return refreshTokenRepository.findByTokenId(tokenId)
                 .filter(token -> token.getStatus() == RefreshToken.TokenStatus.ACTIVE)
                 .filter(token -> token.getExpiryDate().isAfter(clock.instant()))
-                .filter(token -> hashWithSalt(tokenValue, token.getSalt()).equals(token.getTokenHash()))
+                .filter(token -> MessageDigest.isEqual(
+                        hashWithSalt(tokenValue, token.getSalt()).getBytes(StandardCharsets.UTF_8),
+                        token.getTokenHash().getBytes(StandardCharsets.UTF_8)))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid refresh token"));
     }
 

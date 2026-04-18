@@ -64,6 +64,9 @@ public class AuthController {
     @PostMapping("/refresh")
     public ResponseEntity<Void> refreshToken(HttpServletRequest servletRequest, HttpServletResponse servletResponse) {
         String requestRefreshToken = cookieService.getRefreshTokenFromCookie(servletRequest);
+        if (requestRefreshToken == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
 
         Pair<RefreshToken, String> tokenData = refreshTokenService.replaceRefreshToken(requestRefreshToken);
         String refreshToken = tokenData.getSecond();
@@ -77,19 +80,21 @@ public class AuthController {
 
     @PostMapping("/logout")
     public ResponseEntity<?> logout(HttpServletRequest servletRequest, HttpServletResponse servletResponse) {
-        refreshTokenService.deleteByToken(cookieService.getRefreshTokenFromCookie(servletRequest));
+        String refreshToken = cookieService.getRefreshTokenFromCookie(servletRequest);
+        if (refreshToken != null) {
+            refreshTokenService.deleteByToken(refreshToken);
+        }
         servletResponse.addCookie(cookieService.createHttpOnlyCookie("refreshToken", "", 0));
         servletResponse.addCookie(cookieService.createHttpOnlyCookie("token", "", 0));
         return ResponseEntity.ok(new ApiResponse(true, "Logged out successfully"));
     }
 
     @DeleteMapping("/delete")
-    public ResponseEntity<Void> deleteAccount(HttpServletRequest servletRequest, HttpServletResponse servletResponse) {
-
-        String accessToken = cookieService.getAccessTokenFromCookie(servletRequest);
-        UserPrincipal userPrincipal = jwtService.extractUserPrincipal(accessToken);
-
-        userService.deleteById(userPrincipal.id());
+    public ResponseEntity<Void> deleteAccount(@AuthenticationPrincipal UserPrincipal principal,
+                                              HttpServletResponse servletResponse) {
+        userService.deleteById(principal.id());
+        servletResponse.addCookie(cookieService.createHttpOnlyCookie("refreshToken", "", 0));
+        servletResponse.addCookie(cookieService.createHttpOnlyCookie("token", "", 0));
         return ResponseEntity.ok().build();
     }
 }
