@@ -29,6 +29,18 @@ public class User {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
+    @Column(name = "email_verified", nullable = false)
+    private boolean emailVerified = false;
+
+    @Column(name = "verification_token", unique = true)
+    private String verificationToken;
+
+    @Column(name = "verification_token_expiry")
+    private Instant verificationTokenExpiry;
+
+    @Column(name = "verification_token_issued_at")
+    private Instant verificationTokenIssuedAt;
+
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private RefreshToken refreshToken;
 
@@ -88,6 +100,38 @@ public class User {
 
     public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public boolean isEmailVerified() {
+        return emailVerified;
+    }
+
+    public void setEmailVerified(boolean emailVerified) {
+        this.emailVerified = emailVerified;
+    }
+
+    public String getVerificationToken() {
+        return verificationToken;
+    }
+
+    public void setVerificationToken(String verificationToken) {
+        this.verificationToken = verificationToken;
+    }
+
+    public Instant getVerificationTokenExpiry() {
+        return verificationTokenExpiry;
+    }
+
+    public void setVerificationTokenExpiry(Instant verificationTokenExpiry) {
+        this.verificationTokenExpiry = verificationTokenExpiry;
+    }
+
+    public Instant getVerificationTokenIssuedAt() {
+        return verificationTokenIssuedAt;
+    }
+
+    public void setVerificationTokenIssuedAt(Instant verificationTokenIssuedAt) {
+        this.verificationTokenIssuedAt = verificationTokenIssuedAt;
     }
 
     public RefreshToken getRefreshToken() {

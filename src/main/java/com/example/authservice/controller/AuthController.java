@@ -7,14 +7,19 @@ import com.example.authservice.security.JwtService;
 import com.example.authservice.security.RefreshTokenService;
 import com.example.authservice.service.AuthService;
 import com.example.authservice.service.CookieService;
+import com.example.authservice.service.EmailService;
+import com.example.authservice.service.EmailVerificationService;
 import com.example.authservice.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.util.Pair;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,12 +33,39 @@ public class AuthController {
     private final RefreshTokenService refreshTokenService;
     private final UserService userService;
     private final CookieService cookieService;
+    private final EmailVerificationService emailVerificationService;
+    private final EmailService emailService;
+
+    @Value("${app.frontend-url}")
+    private String frontendUrl;
 
     @PostMapping("/register")
-    public ResponseEntity<Void> register(@Valid @RequestBody RegisterRequest request, HttpServletResponse servletResponse) {
-        AuthResponse authResponse = authService.register(request);
-        cookieService.setAccessToken(authResponse.token(), servletResponse);
-        cookieService.setRefreshToken(authResponse.refreshToken(), servletResponse);
+    public ResponseEntity<Void> register(@Valid @RequestBody RegisterRequest request) {
+        authService.register(request);
+        return ResponseEntity.status(HttpStatus.ACCEPTED).build();
+    }
+
+    @GetMapping("/verify-email")
+    public ResponseEntity<Void> verifyEmail(@RequestParam String token, HttpServletResponse servletResponse) {
+        User user = emailVerificationService.validateToken(token);
+        String accessToken = jwtService.generateToken(user);
+        String refreshToken = refreshTokenService.createRefreshToken(user).getSecond();
+        cookieService.setAccessToken(accessToken, servletResponse);
+        cookieService.setRefreshToken(refreshToken, servletResponse);
+        return ResponseEntity.status(HttpStatus.FOUND)
+                .header(HttpHeaders.LOCATION, frontendUrl)
+                .build();
+    }
+
+    @PostMapping("/resend-verification")
+    public ResponseEntity<Void> resendVerification(@Valid @RequestBody ResendVerificationRequest request) {
+        try {
+            String token = emailVerificationService.resendToken(request.email());
+            emailService.sendVerificationEmail(request.email(), token);
+        } catch (ResponseStatusException e) {
+            if (e.getStatusCode() == HttpStatus.TOO_MANY_REQUESTS) throw e;
+            // swallow NOT_FOUND / BAD_REQUEST — don't reveal whether the email exists or is already verified
+        }
         return ResponseEntity.ok().build();
     }
 

@@ -46,6 +46,7 @@ public class UserService {
         user.setProvider(provider);
         user.setProviderId(provider + "_" + email);
         user.setCreatedAt(Instant.now());
+        user.setEmailVerified(!"local".equals(provider));
         userRepository.save(user);
         return user;
     }

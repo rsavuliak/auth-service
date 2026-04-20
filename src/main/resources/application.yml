@@ -9,6 +9,13 @@ cors:
 cookie:
   domain: ${COOKIE_DOMAIN:}
 
+app:
+  base-url: ${APP_BASE_URL:http://localhost:8080}
+  frontend-url: ${FRONTEND_URL:http://localhost:5173}
+  email-verification:
+    token-expiry-minutes: ${EMAIL_VERIFICATION_EXPIRY_MINUTES:60}
+    resend-cooldown-minutes: ${EMAIL_RESEND_COOLDOWN_MINUTES:5}
+
 spring:
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres:5432/auth_db}
@@ -22,6 +29,15 @@ spring:
   test:
     database:
       replace: none
+  mail:
+    host: ${MAIL_SMTP_HOST:smtp.gmail.com}
+    port: ${MAIL_SMTP_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+
 jwt:
     secret: ${JWT_SECRET}
     refresh-token:

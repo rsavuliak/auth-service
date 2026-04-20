@@ -19,4 +19,11 @@ spring:
 jwt:
   secret: ${JWT_SECRET}
   refresh-token:
-    expiration-ms: 604800000 # 7 днів
+    expiration-ms: 604800000 # 7 days
+
+app:
+  base-url: http://localhost:8080
+  frontend-url: http://localhost:5173
+  email-verification:
+    token-expiry-minutes: 60
+    resend-cooldown-minutes: 5

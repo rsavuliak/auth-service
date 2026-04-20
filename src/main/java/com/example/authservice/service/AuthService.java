@@ -22,19 +22,20 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
+    private final EmailVerificationService emailVerificationService;
+    private final EmailService emailService;
 
-    public AuthResponse register(RegisterRequest request) {
+    public User register(RegisterRequest request) {
         Optional<User> existingUser = userService.findUserByEmail(request.email());
         if (existingUser.isPresent()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already in use");
         }
 
         User user = userService.createUser(request.email(), request.password(), "local");
-        String accessToken = jwtService.generateToken(user);
-        String refreshToken = refreshTokenService.createRefreshToken(user).getSecond();
-        return new AuthResponse(accessToken, refreshToken);
+        String token = emailVerificationService.generateToken(user);
+        emailService.sendVerificationEmail(user.getEmail(), token);
+        return user;
     }
-
 
     public AuthResponse login(LoginRequest request) {
         User user = userService.findUser(request.email(), "local")
@@ -42,6 +43,10 @@ public class AuthService {
 
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
+        }
+
+        if (!user.isEmailVerified()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Email not verified");
         }
 
         String accessToken = jwtService.generateToken(user);

@@ -55,6 +55,12 @@ jobs:
             echo "SPRING_DATASOURCE_PASSWORD=${{ secrets.ENV_SPRING_DATASOURCE_PASSWORD }}" >> .env
             echo "JWT_SECRET=${{ secrets.ENV_JWT_SECRET }}" >> .env
             echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> .env
+            echo "MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}" >> .env
+            echo "MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}" >> .env
+            echo "APP_BASE_URL=${{ vars.APP_BASE_URL }}" >> .env
+            echo "FRONTEND_URL=${{ vars.FRONTEND_URL }}" >> .env
+            echo "CORS_ALLOWED_ORIGINS=${{ vars.CORS_ALLOWED_ORIGINS }}" >> .env
+            echo "COOKIE_DOMAIN=${{ vars.COOKIE_DOMAIN }}" >> .env
 
             docker compose down
             docker compose up -d --build

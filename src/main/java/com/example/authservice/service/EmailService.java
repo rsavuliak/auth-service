@@ -1,0 +1,51 @@
+package com.example.authservice.service;
+
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.stereotype.Service;
+
+@Service
+public class EmailService {
+
+    private final JavaMailSender mailSender;
+
+    @Value("${app.base-url}")
+    private String baseUrl;
+
+    @Value("${spring.mail.username}")
+    private String fromAddress;
+
+    public EmailService(JavaMailSender mailSender) {
+        this.mailSender = mailSender;
+    }
+
+    public void sendVerificationEmail(String toEmail, String token) {
+        String link = baseUrl + "/api/v1/auth/verify-email?token=" + token;
+        String html = """
+                <div style="font-family:sans-serif;max-width:480px;margin:auto">
+                  <h2>Verify your email</h2>
+                  <p>Click the button below to activate your account. The link expires in 60 minutes.</p>
+                  <a href="%s" style="display:inline-block;padding:12px 24px;background:#000;color:#fff;
+                     text-decoration:none;border-radius:6px;font-weight:bold">Verify email</a>
+                  <p style="margin-top:16px;color:#666;font-size:13px">
+                    Or copy this link:<br><a href="%s">%s</a>
+                  </p>
+                </div>
+                """.formatted(link, link, link);
+
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, "utf-8");
+            helper.setFrom(fromAddress);
+            helper.setTo(toEmail);
+            helper.setSubject("Verify your email address");
+            helper.setText(html, true);
+            mailSender.send(message);
+        } catch (MessagingException e) {
+            throw new RuntimeException("Failed to send verification email", e);
+        }
+    }
+}
