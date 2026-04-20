@@ -3,12 +3,16 @@ package com.example.authservice.service;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 
 @Service
 public class CookieService {
+
+    @Value("${cookie.domain:}")
+    private String cookieDomain;
 
     public String getRefreshTokenFromCookie(HttpServletRequest request) {
         return getValueFromCookie(request, "refreshToken");
@@ -36,6 +40,9 @@ public class CookieService {
         cookie.setPath("/");
         cookie.setMaxAge(maxAge);
         cookie.setAttribute("SameSite", "None");
+        if (cookieDomain != null && !cookieDomain.isBlank()) {
+            cookie.setDomain(cookieDomain);
+        }
         return cookie;
     }
 
