@@ -45,10 +45,6 @@ public class AuthService {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
         }
 
-        if (!user.isEmailVerified()) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Email not verified");
-        }
-
         String accessToken = jwtService.generateToken(user);
         String refreshToken = refreshTokenService.createRefreshToken(user).getSecond();
 

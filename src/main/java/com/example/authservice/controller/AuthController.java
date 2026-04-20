@@ -87,7 +87,8 @@ public class AuthController {
         UserResponse response = new UserResponse(
                 user.getId().toString(),
                 user.getEmail(),
-                user.getProvider()
+                user.getProvider(),
+                user.isEmailVerified()
         );
 
         return ResponseEntity.ok(response);

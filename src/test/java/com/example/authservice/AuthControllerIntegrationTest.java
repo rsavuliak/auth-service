@@ -287,7 +287,7 @@ class AuthControllerIntegrationTest {
     }
 
     @Test
-    void shouldBlockLoginBeforeEmailVerification() {
+    void shouldAllowLoginBeforeEmailVerification() {
         webTestClient.post()
                 .uri(apiPath + "/register")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -300,7 +300,53 @@ class AuthControllerIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(new LoginRequest("unverified@example.com", "password123"))
                 .exchange()
-                .expectStatus().isForbidden();
+                .expectStatus().isOk()
+                .expectHeader().exists("Set-Cookie");
+    }
+
+    @Test
+    void shouldReturnEmailVerifiedStatusInMeResponse() {
+        // Register but don't verify — emailVerified should be false
+        webTestClient.post()
+                .uri(apiPath + "/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(new RegisterRequest("verifystatus@example.com", "password123"))
+                .exchange()
+                .expectStatus().isEqualTo(HttpStatus.ACCEPTED);
+
+        WebTestClient.ResponseSpec loginResponse = webTestClient.post()
+                .uri(apiPath + "/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(new LoginRequest("verifystatus@example.com", "password123"))
+                .exchange()
+                .expectStatus().isOk();
+
+        String tokenCookie = getAccessTokenCookie(loginResponse);
+
+        webTestClient.get()
+                .uri(apiPath + "/me")
+                .header(HttpHeaders.COOKIE, tokenCookie)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.emailVerified").isEqualTo(false);
+
+        // Now verify email — emailVerified should become true
+        String rawToken = captureRawToken("verifystatus@example.com");
+        WebTestClient.ResponseSpec verifyResponse = webTestClient.get()
+                .uri(apiPath + "/verify-email?token=" + rawToken)
+                .exchange()
+                .expectStatus().is3xxRedirection();
+
+        String verifiedTokenCookie = getAccessTokenCookie(verifyResponse);
+
+        webTestClient.get()
+                .uri(apiPath + "/me")
+                .header(HttpHeaders.COOKIE, verifiedTokenCookie)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.emailVerified").isEqualTo(true);
     }
 
     @Test

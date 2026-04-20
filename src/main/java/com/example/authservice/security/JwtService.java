@@ -32,6 +32,7 @@ public class JwtService {
                 .setSubject(user.getId().toString())
                 .claim("email", user.getEmail())
                 .claim("provider", user.getProvider())
+                .claim("emailVerified", user.isEmailVerified())
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(new Date(System.currentTimeMillis() + expirationTime))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)

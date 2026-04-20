@@ -1,3 +1,3 @@
 package com.example.authservice.dto;
 
-public record UserResponse(String id, String email, String provider) {}
+public record UserResponse(String id, String email, String provider, boolean emailVerified) {}
