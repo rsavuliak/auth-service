@@ -20,6 +20,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -40,9 +41,14 @@ public class AuthController {
     private String frontendUrl;
 
     @PostMapping("/register")
-    public ResponseEntity<Void> register(@Valid @RequestBody RegisterRequest request) {
-        authService.register(request);
-        return ResponseEntity.status(HttpStatus.ACCEPTED).build();
+    public ResponseEntity<UserResponse> register(@Valid @RequestBody RegisterRequest request,
+                                                  HttpServletResponse servletResponse) {
+        AuthResponse authResponse = authService.register(request);
+        cookieService.setAccessToken(authResponse.token(), servletResponse);
+        cookieService.setRefreshToken(authResponse.refreshToken(), servletResponse);
+        User user = userService.findUser(request.email(), "local").orElseThrow();
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new UserResponse(user.getId().toString(), user.getEmail(), user.getProvider(), user.isEmailVerified()));
     }
 
     @GetMapping("/verify-email")
@@ -122,6 +128,7 @@ public class AuthController {
         return ResponseEntity.ok(new ApiResponse(true, "Logged out successfully"));
     }
 
+    @PreAuthorize("principal.emailVerified()")
     @DeleteMapping("/delete")
     public ResponseEntity<Void> deleteAccount(@AuthenticationPrincipal UserPrincipal principal,
                                               HttpServletResponse servletResponse) {

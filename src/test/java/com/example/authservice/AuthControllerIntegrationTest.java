@@ -99,7 +99,7 @@ class AuthControllerIntegrationTest {
     // ── Helpers ────────────────────────────────────────────────────────────────
 
     /**
-     * Registers a user (202), captures the raw verification token via the mocked
+     * Registers a user (201), captures the raw verification token via the mocked
      * EmailService, then calls GET /verify-email (302 + cookies).
      */
     private WebTestClient.ResponseSpec registerAndVerify(String email, String password) {
@@ -108,7 +108,7 @@ class AuthControllerIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(new RegisterRequest(email, password))
                 .exchange()
-                .expectStatus().isEqualTo(HttpStatus.ACCEPTED);
+                .expectStatus().isCreated();
 
         String rawToken = captureRawToken(email);
 
@@ -181,14 +181,14 @@ class AuthControllerIntegrationTest {
     }
 
     @Test
-    void registerShouldReturn202WithoutCookies() {
+    void registerShouldReturn201WithCookies() {
         webTestClient.post()
                 .uri(apiPath + "/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(new RegisterRequest("pending@example.com", "password123"))
                 .exchange()
-                .expectStatus().isEqualTo(HttpStatus.ACCEPTED)
-                .expectHeader().doesNotExist("Set-Cookie");
+                .expectStatus().isCreated()
+                .expectHeader().exists("Set-Cookie");
     }
 
     @Test
@@ -198,7 +198,7 @@ class AuthControllerIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(objectMapper.writeValueAsString(new RegisterRequest("duplicate@example.com", "password123")))
                 .exchange()
-                .expectStatus().isEqualTo(HttpStatus.ACCEPTED);
+                .expectStatus().isCreated();
 
         webTestClient.post()
                 .uri(apiPath + "/register")
@@ -240,7 +240,7 @@ class AuthControllerIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(new RegisterRequest("verify@example.com", "password123"))
                 .exchange()
-                .expectStatus().isEqualTo(HttpStatus.ACCEPTED);
+                .expectStatus().isCreated();
 
         String rawToken = captureRawToken("verify@example.com");
 
@@ -269,7 +269,7 @@ class AuthControllerIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(new RegisterRequest("reuse@example.com", "password123"))
                 .exchange()
-                .expectStatus().isEqualTo(HttpStatus.ACCEPTED);
+                .expectStatus().isCreated();
 
         String rawToken = captureRawToken("reuse@example.com");
 
@@ -293,7 +293,7 @@ class AuthControllerIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(new RegisterRequest("unverified@example.com", "password123"))
                 .exchange()
-                .expectStatus().isEqualTo(HttpStatus.ACCEPTED);
+                .expectStatus().isCreated();
 
         webTestClient.post()
                 .uri(apiPath + "/login")
@@ -307,21 +307,14 @@ class AuthControllerIntegrationTest {
     @Test
     void shouldReturnEmailVerifiedStatusInMeResponse() {
         // Register but don't verify — emailVerified should be false
-        webTestClient.post()
+        WebTestClient.ResponseSpec registerResponse = webTestClient.post()
                 .uri(apiPath + "/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(new RegisterRequest("verifystatus@example.com", "password123"))
                 .exchange()
-                .expectStatus().isEqualTo(HttpStatus.ACCEPTED);
+                .expectStatus().isCreated();
 
-        WebTestClient.ResponseSpec loginResponse = webTestClient.post()
-                .uri(apiPath + "/login")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(new LoginRequest("verifystatus@example.com", "password123"))
-                .exchange()
-                .expectStatus().isOk();
-
-        String tokenCookie = getAccessTokenCookie(loginResponse);
+        String tokenCookie = getAccessTokenCookie(registerResponse);
 
         webTestClient.get()
                 .uri(apiPath + "/me")
@@ -673,6 +666,48 @@ class AuthControllerIntegrationTest {
                 .expectStatus().isUnauthorized();
 
         assertThat(userRepository.findByEmail("login_test@example.com").isPresent()).isFalse();
+    }
+
+    @Test
+    void registerShouldIssueValidTokenWithEmailVerifiedFalse() {
+        WebTestClient.ResponseSpec registerResponse = webTestClient.post()
+                .uri(apiPath + "/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(new RegisterRequest("newuser@example.com", "password123"))
+                .exchange()
+                .expectStatus().isCreated();
+
+        String tokenCookie = getAccessTokenCookie(registerResponse);
+
+        webTestClient.get()
+                .uri(apiPath + "/me")
+                .header(HttpHeaders.COOKIE, tokenCookie)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.emailVerified").isEqualTo(false)
+                .jsonPath("$.id").isNotEmpty()
+                .jsonPath("$.email").isEqualTo("newuser@example.com");
+    }
+
+    @Test
+    void deleteAccountShouldReturn403ForUnverifiedUser() {
+        WebTestClient.ResponseSpec registerResponse = webTestClient.post()
+                .uri(apiPath + "/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(new RegisterRequest("unverified-delete@example.com", "password123"))
+                .exchange()
+                .expectStatus().isCreated();
+
+        String tokenCookie = getAccessTokenCookie(registerResponse);
+
+        webTestClient.delete()
+                .uri(apiPath + "/delete")
+                .header(HttpHeaders.COOKIE, tokenCookie)
+                .exchange()
+                .expectStatus().isForbidden()
+                .expectBody()
+                .jsonPath("$.error").isEqualTo("EMAIL_NOT_VERIFIED");
     }
 
     private String extractTokenFromJson(String json) throws IOException {

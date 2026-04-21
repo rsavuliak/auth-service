@@ -48,7 +48,8 @@ public class JwtService {
 
         UUID id = UUID.fromString(claims.getSubject());
         String email = claims.get("email", String.class);
+        boolean emailVerified = Boolean.TRUE.equals(claims.get("emailVerified", Boolean.class));
 
-        return new UserPrincipal(id, email);
+        return new UserPrincipal(id, email, emailVerified);
     }
 }

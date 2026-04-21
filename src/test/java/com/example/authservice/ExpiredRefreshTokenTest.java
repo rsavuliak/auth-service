@@ -92,7 +92,7 @@ public class ExpiredRefreshTokenTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(new RegisterRequest(email, password))
                 .exchange()
-                .expectStatus().isEqualTo(HttpStatus.ACCEPTED);
+                .expectStatus().isCreated();
 
         ArgumentCaptor<String> tokenCaptor = ArgumentCaptor.forClass(String.class);
         verify(emailService).sendVerificationEmail(eq(email), tokenCaptor.capture());

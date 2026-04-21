@@ -25,16 +25,19 @@ public class AuthService {
     private final EmailVerificationService emailVerificationService;
     private final EmailService emailService;
 
-    public User register(RegisterRequest request) {
+    public AuthResponse register(RegisterRequest request) {
         Optional<User> existingUser = userService.findUserByEmail(request.email());
         if (existingUser.isPresent()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already in use");
         }
 
         User user = userService.createUser(request.email(), request.password(), "local");
-        String token = emailVerificationService.generateToken(user);
-        emailService.sendVerificationEmail(user.getEmail(), token);
-        return user;
+        String verificationToken = emailVerificationService.generateToken(user);
+        emailService.sendVerificationEmail(user.getEmail(), verificationToken);
+
+        String accessToken = jwtService.generateToken(user);
+        String refreshToken = refreshTokenService.createRefreshToken(user).getSecond();
+        return new AuthResponse(accessToken, refreshToken);
     }
 
     public AuthResponse login(LoginRequest request) {

@@ -33,15 +33,17 @@ Standard Spring Boot 3.2 layered architecture (`controller → service → repos
 - `exception/` — `GlobalExceptionHandler`
 
 **Auth flow:**
-1. `POST /register` → create user (`emailVerified=false`), send verification email, return 202 (no cookies)
-2. `GET /verify-email?token=` → validate token, mark verified, issue JWT + refresh cookies, redirect to frontend
+1. `POST /register` → create user (`emailVerified=false`), send verification email, issue JWT + refresh cookies, return 201 + `UserResponse` body
+2. `GET /verify-email?token=` → validate token, mark verified, re-issue JWT + refresh cookies, redirect to frontend
 3. `POST /login` → authenticate, issue cookies regardless of `emailVerified` status
 4. Both tokens are HTTP-only, Secure, SameSite=None cookies; domain set via `COOKIE_DOMAIN` env var
 5. `JwtAuthFilter` validates access token on protected requests
 6. `POST /refresh` exchanges refresh token for new pair
 7. Google OAuth via `GET /oauth/google?code=...` — users auto-verified on creation
 
-**JWT claims:** `sub` (user ID), `email`, `provider`, `emailVerified` — frontend reads `emailVerified` to show verification banner or enforce limited rights.
+**emailVerified enforcement:** `emailVerified=false` users are logged in but have limited access. `DELETE /delete` is gated with `@PreAuthorize("principal.emailVerified")` — returns 403 `{"error": "EMAIL_NOT_VERIFIED"}` for unverified users. Downstream services enforce their own policies via the `emailVerified` JWT claim.
+
+**JWT claims:** `sub` (user ID), `email`, `provider`, `emailVerified` — frontend reads `emailVerified` to show verification banner or restrict UI. `/me` is the authoritative source for `emailVerified`; frontend should re-fetch on window-focus since the JWT claim can be up to 15 min stale (access token lifetime).
 
 **Token security:**
 - Refresh tokens: stored as `SHA-256(token + salt)`, never raw
