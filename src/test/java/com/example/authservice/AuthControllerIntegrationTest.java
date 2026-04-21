@@ -690,26 +690,6 @@ class AuthControllerIntegrationTest {
                 .jsonPath("$.email").isEqualTo("newuser@example.com");
     }
 
-    @Test
-    void deleteAccountShouldReturn403ForUnverifiedUser() {
-        WebTestClient.ResponseSpec registerResponse = webTestClient.post()
-                .uri(apiPath + "/register")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(new RegisterRequest("unverified-delete@example.com", "password123"))
-                .exchange()
-                .expectStatus().isCreated();
-
-        String tokenCookie = getAccessTokenCookie(registerResponse);
-
-        webTestClient.delete()
-                .uri(apiPath + "/delete")
-                .header(HttpHeaders.COOKIE, tokenCookie)
-                .exchange()
-                .expectStatus().isForbidden()
-                .expectBody()
-                .jsonPath("$.error").isEqualTo("EMAIL_NOT_VERIFIED");
-    }
-
     private String extractTokenFromJson(String json) throws IOException {
         return objectMapper.readTree(json).get("token").asText();
     }

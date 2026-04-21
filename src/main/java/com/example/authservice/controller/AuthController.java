@@ -128,7 +128,6 @@ public class AuthController {
         return ResponseEntity.ok(new ApiResponse(true, "Logged out successfully"));
     }
 
-    @PreAuthorize("principal.emailVerified()")
     @DeleteMapping("/delete")
     public ResponseEntity<Void> deleteAccount(@AuthenticationPrincipal UserPrincipal principal,
                                               HttpServletResponse servletResponse) {

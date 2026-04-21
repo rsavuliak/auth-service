@@ -219,7 +219,6 @@ Permanently delete the current user's account. Requires a valid `token` cookie.
 |--------|------|---------|
 | 200 | _(empty)_ | Account deleted; cookies cleared |
 | 401 | _(empty)_ | Missing or invalid token |
-| 403 | `{ "error": "EMAIL_NOT_VERIFIED" }` | Email not yet verified |
 | 404 | `{ "error": "..." }` | User not found |
 
 ---
