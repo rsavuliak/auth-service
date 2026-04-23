@@ -33,6 +33,7 @@ services:
     networks:
       - auth-network
       - gateway-network
+      - user-service-net
 
 volumes:
   auth_pgdata:
@@ -41,3 +42,6 @@ networks:
   auth-network:
   gateway-network:
     external: true
+  user-service-net:
+    external: true
+    name: user-service_default
