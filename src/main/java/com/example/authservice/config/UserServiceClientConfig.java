@@ -15,6 +15,7 @@ public class UserServiceClientConfig {
     public RestClient userServiceRestClient(UserServiceProperties userServiceProperties,
                                             InternalApiProperties internalApiProperties) {
         HttpClient httpClient = HttpClient.newBuilder()
+                .version(HttpClient.Version.HTTP_1_1)
                 .connectTimeout(Duration.ofSeconds(2))
                 .build();
 
