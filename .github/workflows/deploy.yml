@@ -61,6 +61,8 @@ jobs:
             echo "FRONTEND_URL=${{ vars.FRONTEND_URL }}" >> .env
             echo "CORS_ALLOWED_ORIGINS=${{ vars.CORS_ALLOWED_ORIGINS }}" >> .env
             echo "COOKIE_DOMAIN=${{ vars.COOKIE_DOMAIN }}" >> .env
+            echo "INTERNAL_API_KEY=${{ secrets.INTERNAL_API_KEY }}" >> .env
+            echo "USER_SERVICE_BASE_URL=${{ vars.USER_SERVICE_BASE_URL }}" >> .env
 
             docker compose up -d --build --no-deps auth-service
 

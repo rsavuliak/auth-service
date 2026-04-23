@@ -27,3 +27,10 @@ app:
   email-verification:
     token-expiry-minutes: 60
     resend-cooldown-minutes: 5
+
+internal:
+  api-key: test-internal-api-key-at-least-thirty-two-chars
+
+user-service:
+  base-url: http://localhost:8081
+  enabled: true

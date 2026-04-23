@@ -4,6 +4,7 @@ import com.example.authservice.dto.*;
 import com.example.authservice.repository.RefreshTokenRepository;
 import com.example.authservice.repository.UserRepository;
 import com.example.authservice.service.EmailService;
+import com.example.authservice.service.UserServiceClient;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.cdimascio.dotenv.Dotenv;
 import org.junit.jupiter.api.BeforeAll;
@@ -55,6 +56,9 @@ public class ExpiredRefreshTokenTest {
 
     @MockBean
     private EmailService emailService;
+
+    @MockBean
+    private UserServiceClient userServiceClient;
 
     @Value("${jwt.secret}")
     private String secretKey;

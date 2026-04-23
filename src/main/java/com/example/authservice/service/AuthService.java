@@ -4,12 +4,15 @@ import com.example.authservice.dto.AuthResponse;
 import com.example.authservice.dto.LoginRequest;
 import com.example.authservice.dto.RegisterRequest;
 import com.example.authservice.entity.User;
+import com.example.authservice.event.VerificationEmailEvent;
 import com.example.authservice.security.JwtService;
 import com.example.authservice.security.RefreshTokenService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Optional;
@@ -23,8 +26,10 @@ public class AuthService {
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
     private final EmailVerificationService emailVerificationService;
-    private final EmailService emailService;
+    private final UserServiceClient userServiceClient;
+    private final ApplicationEventPublisher eventPublisher;
 
+    @Transactional
     public AuthResponse register(RegisterRequest request) {
         Optional<User> existingUser = userService.findUserByEmail(request.email());
         if (existingUser.isPresent()) {
@@ -32,8 +37,9 @@ public class AuthService {
         }
 
         User user = userService.createUser(request.email(), request.password(), "local");
+        userServiceClient.ensureProfile(user.getId(), user.getEmail());
         String verificationToken = emailVerificationService.generateToken(user);
-        emailService.sendVerificationEmail(user.getEmail(), verificationToken);
+        eventPublisher.publishEvent(new VerificationEmailEvent(user.getEmail(), verificationToken));
 
         String accessToken = jwtService.generateToken(user);
         String refreshToken = refreshTokenService.createRefreshToken(user).getSecond();

@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
@@ -21,6 +22,7 @@ public class GoogleAuthService {
 
     private final RestTemplate restTemplate;
     private final UserService userService;
+    private final UserServiceClient userServiceClient;
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
 
@@ -33,6 +35,7 @@ public class GoogleAuthService {
     @Value("${google.redirect-uri}")
     private String redirectUri;
 
+    @Transactional
     public AuthResponse processOAuthCallback(String code) {
         GoogleTokenResponse tokenResponse = getTokenFromGoogle(code);
         GoogleUserInfo userInfo = getUserInfoFromGoogle(tokenResponse.getAccessToken());
@@ -97,6 +100,10 @@ public class GoogleAuthService {
                     }
                     return user;
                 })
-                .orElseGet(() -> userService.createUser(email, "google"));
+                .orElseGet(() -> {
+                    User created = userService.createUser(email, "google");
+                    userServiceClient.ensureProfile(created.getId(), created.getEmail());
+                    return created;
+                });
     }
 }

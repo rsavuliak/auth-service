@@ -17,7 +17,9 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
+import com.example.authservice.exception.UserServiceUnavailableException;
 import com.example.authservice.service.EmailService;
+import com.example.authservice.service.UserServiceClient;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpHeaders;
@@ -40,8 +42,11 @@ import java.util.Date;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 @Testcontainers
@@ -67,6 +72,9 @@ class AuthControllerIntegrationTest {
 
     @MockBean
     private EmailService emailService;
+
+    @MockBean
+    private UserServiceClient userServiceClient;
 
     @Value("${jwt.secret}")
     private String secretKey;
@@ -692,5 +700,56 @@ class AuthControllerIntegrationTest {
 
     private String extractTokenFromJson(String json) throws IOException {
         return objectMapper.readTree(json).get("token").asText();
+    }
+
+    // ── User Service integration ────────────────────────────────────────────────
+
+    @Test
+    void registerShouldCallEnsureProfileExactlyOnce() {
+        webTestClient.post()
+                .uri(apiPath + "/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(new RegisterRequest("ensure@example.com", "password123"))
+                .exchange()
+                .expectStatus().isCreated();
+
+        User saved = userRepository.findByEmailAndProvider("ensure@example.com", "local").orElseThrow();
+        verify(userServiceClient).ensureProfile(eq(saved.getId()), eq("ensure@example.com"));
+    }
+
+    @Test
+    void registerShouldRollbackWhenUserServiceFails() {
+        doThrow(new UserServiceUnavailableException("boom"))
+                .when(userServiceClient).ensureProfile(any(UUID.class), any(String.class));
+
+        webTestClient.post()
+                .uri(apiPath + "/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(new RegisterRequest("rollback@example.com", "password123"))
+                .exchange()
+                .expectStatus().isEqualTo(HttpStatus.BAD_GATEWAY);
+
+        assertThat(userRepository.findByEmailAndProvider("rollback@example.com", "local")).isEmpty();
+        verify(emailService, never()).sendVerificationEmail(eq("rollback@example.com"), any(String.class));
+    }
+
+    @Test
+    void deleteShouldReturnOkEvenIfUserServiceFails() {
+        WebTestClient.ResponseSpec verifyResponse = registerAndVerify("delete-resilient@example.com", "password123");
+        String tokenCookie = getAccessTokenCookie(verifyResponse);
+        String refreshTokenCookie = getRefreshTokenCookie(verifyResponse);
+
+        doThrow(new UserServiceUnavailableException("boom"))
+                .when(userServiceClient).deleteProfile(any(UUID.class));
+
+        webTestClient.delete()
+                .uri(apiPath + "/delete")
+                .header(HttpHeaders.COOKIE, tokenCookie)
+                .header(HttpHeaders.COOKIE, refreshTokenCookie)
+                .exchange()
+                .expectStatus().isOk();
+
+        assertThat(userRepository.findByEmailAndProvider("delete-resilient@example.com", "local")).isEmpty();
+        verify(userServiceClient).deleteProfile(any(UUID.class));
     }
 }

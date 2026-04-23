@@ -1,6 +1,8 @@
 package com.example.authservice;
 
+import com.example.authservice.config.InternalApiProperties;
 import com.example.authservice.config.JwtProperties;
+import com.example.authservice.config.UserServiceProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -10,7 +12,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
 import java.time.Clock;
 
 @SpringBootApplication
-@EnableConfigurationProperties(JwtProperties.class)
+@EnableConfigurationProperties({JwtProperties.class, InternalApiProperties.class, UserServiceProperties.class})
 @EnableAsync
 public class AuthServiceApplication {
     public static void main(String[] args) {

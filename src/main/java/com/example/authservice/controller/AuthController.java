@@ -10,17 +10,19 @@ import com.example.authservice.service.CookieService;
 import com.example.authservice.service.EmailService;
 import com.example.authservice.service.EmailVerificationService;
 import com.example.authservice.service.UserService;
+import com.example.authservice.service.UserServiceClient;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.util.Pair;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -29,6 +31,8 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class AuthController {
 
+    private static final Logger log = LoggerFactory.getLogger(AuthController.class);
+
     private final AuthService authService;
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
@@ -36,6 +40,7 @@ public class AuthController {
     private final CookieService cookieService;
     private final EmailVerificationService emailVerificationService;
     private final EmailService emailService;
+    private final UserServiceClient userServiceClient;
 
     @Value("${app.frontend-url}")
     private String frontendUrl;
@@ -132,6 +137,12 @@ public class AuthController {
     public ResponseEntity<Void> deleteAccount(@AuthenticationPrincipal UserPrincipal principal,
                                               HttpServletResponse servletResponse) {
         userService.deleteById(principal.id());
+        try {
+            userServiceClient.deleteProfile(principal.id());
+        } catch (Exception e) {
+            log.error("User Service deleteProfile failed for id={}; profile may be orphaned until reconciliation",
+                    principal.id(), e);
+        }
         servletResponse.addCookie(cookieService.createHttpOnlyCookie("refreshToken", "", 0));
         servletResponse.addCookie(cookieService.createHttpOnlyCookie("token", "", 0));
         return ResponseEntity.ok().build();

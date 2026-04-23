@@ -51,6 +51,20 @@ public class GlobalExceptionHandler {
                 .body(Map.of("errors", errors));
     }
 
+    @ExceptionHandler(UserServiceUnavailableException.class)
+    public ResponseEntity<Map<String, String>> handleUserServiceUnavailable(UserServiceUnavailableException ex) {
+        log.error("User Service unavailable: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                .body(Map.of("error", "User service unavailable"));
+    }
+
+    @ExceptionHandler(UserServiceAuthException.class)
+    public ResponseEntity<Map<String, String>> handleUserServiceAuth(UserServiceAuthException ex) {
+        log.error("User Service authentication failure — INTERNAL_API_KEY mismatch: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Internal server error"));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleGenericException(Exception ex) {
         log.error("Unhandled exception", ex);

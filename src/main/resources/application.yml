@@ -48,3 +48,10 @@ google:
   client-id: 424121716950-g87ltpn5f3q6q4gl169frn9fp046i7rd.apps.googleusercontent.com
   client-secret: ${GOOGLE_CLIENT_SECRET}
   redirect-uri: https://auth.savuliak.com/api/v1/auth/oauth/google
+
+internal:
+  api-key: ${INTERNAL_API_KEY}
+
+user-service:
+  base-url: ${USER_SERVICE_BASE_URL:http://localhost:8081}
+  enabled: ${USER_SERVICE_ENABLED:true}
