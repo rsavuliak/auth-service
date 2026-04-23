@@ -85,6 +85,22 @@ Integration tests mock `EmailService` with `@MockBean` — no SMTP needed. Raw v
 
 ## Deployment
 
-CI/CD via `.github/workflows/deploy.yml`: push to `main` → Maven build → rsync to server → `docker compose up --build` over SSH. External `gateway-network` Docker network must exist on the server (used by nginx reverse proxy).
+CI/CD via `.github/workflows/deploy.yml`: push to `main` → Maven build → rsync to server → `docker compose up -d --build --no-deps auth-service` over SSH (postgres is deliberately left alone, see commit 5a260bf). External `gateway-network` Docker network must exist on the server (used by nginx reverse proxy). The deploy waits for `Started AuthServiceApplication` in the container logs and fails fast on `password authentication failed`.
 
-**Known server issue:** if `docker compose down` + `up` recreates the postgres container, the existing volume retains the old password. Fix: `docker exec auth-postgres psql -U postgres -c "ALTER USER postgres WITH PASSWORD 'postgres';"` then restart the auth service.
+**DB password — single source of truth:** `docker-compose.yml` reads `POSTGRES_USER` / `POSTGRES_PASSWORD` from `.env` (`${SPRING_DATASOURCE_USERNAME}` / `${SPRING_DATASOURCE_PASSWORD}`). This only affects the **initial** volume creation — postgres stores the password inside the data volume on first init and ignores `POSTGRES_PASSWORD` on subsequent starts.
+
+**Rotating the DB password (GitHub secret `ENV_SPRING_DATASOURCE_PASSWORD`):** rotating the secret alone will break the deploy, because the existing volume still has the old password. Procedure:
+1. On the server, ALTER the DB user to the new password *before* merging the secret rotation:
+   ```
+   docker exec auth-postgres psql -U postgres -c "ALTER USER postgres WITH PASSWORD '<new>';"
+   ```
+2. Update the GitHub secret.
+3. Push / redeploy.
+
+**Recovery if auth-service is returning 500s with `password authentication failed` in logs** (drift between `.env` and the volume's stored password):
+```
+cd /home/deploy/auth-service
+PW=$(grep '^SPRING_DATASOURCE_PASSWORD=' .env | cut -d= -f2-)
+docker exec auth-postgres psql -U postgres -c "ALTER USER postgres WITH PASSWORD '$PW';"
+docker compose restart auth-service
+```

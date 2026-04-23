@@ -63,4 +63,24 @@ jobs:
             echo "COOKIE_DOMAIN=${{ vars.COOKIE_DOMAIN }}" >> .env
 
             docker compose up -d --build --no-deps auth-service
+
+            echo "⏳ waiting for auth-service to become ready (max 90s)..."
+            for i in $(seq 1 30); do
+              LOG=$(docker logs --since 2m auth-service-auth-service-1 2>&1 || true)
+              if echo "$LOG" | grep -q "Started AuthServiceApplication"; then
+                echo "✅ auth-service started"
+                exit 0
+              fi
+              if echo "$LOG" | grep -q "password authentication failed"; then
+                echo "❌ DB password mismatch — auth-service cannot connect to postgres."
+                echo "   Run on the server:"
+                echo "     docker exec auth-postgres psql -U postgres -c \"ALTER USER postgres WITH PASSWORD '<value of SPRING_DATASOURCE_PASSWORD>';\""
+                echo "   then re-run this deploy. See CLAUDE.md → Deployment → Rotating the DB password."
+                exit 1
+              fi
+              sleep 3
+            done
+            echo "❌ auth-service did not report 'Started AuthServiceApplication' within 90s. Recent logs:"
+            docker logs --tail 60 auth-service-auth-service-1 2>&1
+            exit 1
           EOF
