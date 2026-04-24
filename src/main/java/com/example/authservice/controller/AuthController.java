@@ -9,6 +9,7 @@ import com.example.authservice.service.AuthService;
 import com.example.authservice.service.CookieService;
 import com.example.authservice.service.EmailService;
 import com.example.authservice.service.EmailVerificationService;
+import com.example.authservice.service.PasswordResetService;
 import com.example.authservice.service.UserService;
 import com.example.authservice.service.UserServiceClient;
 import jakarta.servlet.http.HttpServletRequest;
@@ -41,6 +42,7 @@ public class AuthController {
     private final EmailVerificationService emailVerificationService;
     private final EmailService emailService;
     private final UserServiceClient userServiceClient;
+    private final PasswordResetService passwordResetService;
 
     @Value("${app.frontend-url}")
     private String frontendUrl;
@@ -78,6 +80,23 @@ public class AuthController {
             // swallow NOT_FOUND / BAD_REQUEST — don't reveal whether the email exists or is already verified
         }
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        try {
+            passwordResetService.initiateReset(request.email());
+        } catch (ResponseStatusException e) {
+            if (e.getStatusCode() == HttpStatus.TOO_MANY_REQUESTS) throw e;
+            // swallow NOT_FOUND — never reveal whether the email exists
+        }
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<ApiResponse> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        passwordResetService.resetPassword(request.token(), request.newPassword());
+        return ResponseEntity.ok(new ApiResponse(true, "Password reset successfully"));
     }
 
     @PostMapping("/login")

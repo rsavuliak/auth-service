@@ -41,6 +41,15 @@ public class User {
     @Column(name = "verification_token_issued_at")
     private Instant verificationTokenIssuedAt;
 
+    @Column(name = "password_reset_token", unique = true)
+    private String passwordResetToken;
+
+    @Column(name = "password_reset_token_expiry")
+    private Instant passwordResetTokenExpiry;
+
+    @Column(name = "password_reset_token_issued_at")
+    private Instant passwordResetTokenIssuedAt;
+
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private RefreshToken refreshToken;
 
@@ -132,6 +141,30 @@ public class User {
 
     public void setVerificationTokenIssuedAt(Instant verificationTokenIssuedAt) {
         this.verificationTokenIssuedAt = verificationTokenIssuedAt;
+    }
+
+    public String getPasswordResetToken() {
+        return passwordResetToken;
+    }
+
+    public void setPasswordResetToken(String passwordResetToken) {
+        this.passwordResetToken = passwordResetToken;
+    }
+
+    public Instant getPasswordResetTokenExpiry() {
+        return passwordResetTokenExpiry;
+    }
+
+    public void setPasswordResetTokenExpiry(Instant passwordResetTokenExpiry) {
+        this.passwordResetTokenExpiry = passwordResetTokenExpiry;
+    }
+
+    public Instant getPasswordResetTokenIssuedAt() {
+        return passwordResetTokenIssuedAt;
+    }
+
+    public void setPasswordResetTokenIssuedAt(Instant passwordResetTokenIssuedAt) {
+        this.passwordResetTokenIssuedAt = passwordResetTokenIssuedAt;
     }
 
     public RefreshToken getRefreshToken() {

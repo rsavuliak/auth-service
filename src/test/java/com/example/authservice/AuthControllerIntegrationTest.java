@@ -127,6 +127,14 @@ class AuthControllerIntegrationTest {
                 .expectHeader().exists("Set-Cookie");
     }
 
+    /** Captures the raw password reset token that was passed to the mocked EmailService. */
+    private String captureRawResetToken(String email) {
+        ArgumentCaptor<String> captor = ArgumentCaptor.forClass(String.class);
+        verify(emailService).sendPasswordResetEmail(eq(email), captor.capture());
+        clearInvocations(emailService);
+        return captor.getValue();
+    }
+
     /** Captures the raw verification token that was passed to the mocked EmailService. */
     private String captureRawToken(String email) {
         ArgumentCaptor<String> tokenCaptor = ArgumentCaptor.forClass(String.class);
@@ -700,6 +708,195 @@ class AuthControllerIntegrationTest {
 
     private String extractTokenFromJson(String json) throws IOException {
         return objectMapper.readTree(json).get("token").asText();
+    }
+
+    // ── Password reset ───────────────────────────────────────────────────────────
+
+    @Test
+    void forgotPasswordWithUnknownEmailReturns200WithoutEmail() {
+        webTestClient.post()
+                .uri(apiPath + "/forgot-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("{\"email\":\"nobody@example.com\"}")
+                .exchange()
+                .expectStatus().isOk();
+
+        verify(emailService, never()).sendPasswordResetEmail(any(), any());
+    }
+
+    @Test
+    void forgotPasswordWithOAuthUserReturns200WithoutEmail() {
+        User googleUser = new User("oauthuser@example.com", null, "google", "google-id-123");
+        googleUser.setEmailVerified(true);
+        userRepository.save(googleUser);
+
+        webTestClient.post()
+                .uri(apiPath + "/forgot-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("{\"email\":\"oauthuser@example.com\"}")
+                .exchange()
+                .expectStatus().isOk();
+
+        verify(emailService, never()).sendPasswordResetEmail(any(), any());
+    }
+
+    @Test
+    void forgotPasswordWithLocalUserReturns200AndSendsEmail() {
+        registerAndVerify("resetme@example.com", "password123");
+
+        webTestClient.post()
+                .uri(apiPath + "/forgot-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("{\"email\":\"resetme@example.com\"}")
+                .exchange()
+                .expectStatus().isOk();
+
+        verify(emailService).sendPasswordResetEmail(eq("resetme@example.com"), any(String.class));
+    }
+
+    @Test
+    void forgotPasswordCooldownReturns429() {
+        registerAndVerify("cooldown@example.com", "password123");
+
+        webTestClient.post()
+                .uri(apiPath + "/forgot-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("{\"email\":\"cooldown@example.com\"}")
+                .exchange()
+                .expectStatus().isOk();
+
+        webTestClient.post()
+                .uri(apiPath + "/forgot-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("{\"email\":\"cooldown@example.com\"}")
+                .exchange()
+                .expectStatus().isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+    }
+
+    @Test
+    void resetPasswordHappyPath() {
+        registerAndVerify("resetflow@example.com", "oldPassword123");
+
+        webTestClient.post()
+                .uri(apiPath + "/forgot-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("{\"email\":\"resetflow@example.com\"}")
+                .exchange()
+                .expectStatus().isOk();
+
+        String rawToken = captureRawResetToken("resetflow@example.com");
+
+        webTestClient.post()
+                .uri(apiPath + "/reset-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("{\"token\":\"" + rawToken + "\",\"newPassword\":\"newPassword456\"}")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.success").isEqualTo(true);
+
+        // sessions revoked
+        User user = userRepository.findByEmailAndProvider("resetflow@example.com", "local").orElseThrow();
+        assertThat(refreshTokenRepository.findByUser(user)).isEmpty();
+
+        // old password rejected
+        webTestClient.post()
+                .uri(apiPath + "/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(new LoginRequest("resetflow@example.com", "oldPassword123"))
+                .exchange()
+                .expectStatus().isUnauthorized();
+
+        // new password accepted
+        webTestClient.post()
+                .uri(apiPath + "/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(new LoginRequest("resetflow@example.com", "newPassword456"))
+                .exchange()
+                .expectStatus().isOk();
+    }
+
+    @Test
+    void resetPasswordWithInvalidTokenReturns401() {
+        webTestClient.post()
+                .uri(apiPath + "/reset-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("{\"token\":\"" + UUID.randomUUID() + "\",\"newPassword\":\"newPassword123\"}")
+                .exchange()
+                .expectStatus().isUnauthorized();
+    }
+
+    @Test
+    void resetPasswordWithExpiredTokenReturns401() {
+        registerAndVerify("expired-reset@example.com", "password123");
+
+        webTestClient.post()
+                .uri(apiPath + "/forgot-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("{\"email\":\"expired-reset@example.com\"}")
+                .exchange()
+                .expectStatus().isOk();
+
+        String rawToken = captureRawResetToken("expired-reset@example.com");
+
+        User user = userRepository.findByEmailAndProvider("expired-reset@example.com", "local").orElseThrow();
+        user.setPasswordResetTokenExpiry(Instant.now().minusSeconds(3600));
+        userRepository.save(user);
+
+        webTestClient.post()
+                .uri(apiPath + "/reset-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("{\"token\":\"" + rawToken + "\",\"newPassword\":\"newPassword123\"}")
+                .exchange()
+                .expectStatus().isUnauthorized();
+    }
+
+    @Test
+    void resetPasswordTokenIsSingleUse() {
+        registerAndVerify("singleuse@example.com", "password123");
+
+        webTestClient.post()
+                .uri(apiPath + "/forgot-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("{\"email\":\"singleuse@example.com\"}")
+                .exchange()
+                .expectStatus().isOk();
+
+        String rawToken = captureRawResetToken("singleuse@example.com");
+
+        webTestClient.post()
+                .uri(apiPath + "/reset-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("{\"token\":\"" + rawToken + "\",\"newPassword\":\"newPassword456\"}")
+                .exchange()
+                .expectStatus().isOk();
+
+        webTestClient.post()
+                .uri(apiPath + "/reset-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("{\"token\":\"" + rawToken + "\",\"newPassword\":\"anotherPassword789\"}")
+                .exchange()
+                .expectStatus().isUnauthorized();
+    }
+
+    @Test
+    void resetPasswordBlankTokenReturns400() {
+        webTestClient.post()
+                .uri(apiPath + "/reset-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("{\"token\":\"\",\"newPassword\":\"newPassword123\"}")
+                .exchange()
+                .expectStatus().isBadRequest();
+    }
+
+    @Test
+    void resetPasswordShortPasswordReturns400() {
+        webTestClient.post()
+                .uri(apiPath + "/reset-password")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue("{\"token\":\"sometoken\",\"newPassword\":\"short\"}")
+                .exchange()
+                .expectStatus().isBadRequest();
     }
 
     // ── User Service integration ────────────────────────────────────────────────
