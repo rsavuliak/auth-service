@@ -69,6 +69,12 @@ jobs:
             echo "INTERNAL_API_KEY=${{ secrets.INTERNAL_API_KEY }}" >> .env
             echo "USER_SERVICE_BASE_URL=${{ vars.USER_SERVICE_BASE_URL }}" >> .env
 
+            # Sync postgres password to match .env — prevents drift between the
+            # volume's stored password and what the app expects after a secret rotation.
+            docker exec auth-postgres psql -U postgres \
+              -c "ALTER USER ${{ secrets.ENV_SPRING_DATASOURCE_USERNAME }} WITH PASSWORD '${{ secrets.ENV_SPRING_DATASOURCE_PASSWORD }}';" \
+              2>/dev/null || echo "⚠️  Could not sync DB password (container not running yet?)"
+
             docker compose up -d --build --no-deps auth-service
 
             echo "⏳ waiting for auth-service to become ready (max 90s)..."
